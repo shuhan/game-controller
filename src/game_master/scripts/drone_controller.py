@@ -25,7 +25,7 @@ class DroneController:
         self.rate = rospy.Rate(100)
 
     def print_help(self):
-        print('Control:\nw\t: Forward\ns\t: Reverse\nd\t: Turn Right\na\t: Turn Left\nSpace\t: Takeoff/land\n+\t: Increase Speed\n-\t: Decrease Speed')
+        print('Control:\nw\t: Forward\ns\t: Reverse\nd\t: Right\na\t: Left\ne\t: Yaw Right\nq\t: Yaw Left\nSpace\t: Takeoff/land\n+\t: Increase Speed\n-\t: Decrease Speed')
 
     def print_status(self):
         print("Speed {0} Status {1}".format(self.speed, self.status))
@@ -66,13 +66,17 @@ class DroneController:
         
         cmd = Twist()
         
-        if self.char == 'w':
+        if self.char == 'w':                # Forward
             cmd.linear.x    = self.speed
-        elif self.char == 's':
+        elif self.char == 's':              # Reverse
             cmd.linear.x    = -1 * self.speed
-        elif self.char == 'a':
+        elif self.char == 'a':              # Left
+            cmd.linear.y   = self.speed
+        elif self.char == 'd':              # Right
+            cmd.linear.y   = -1 * self.speed
+        elif self.char == 'q':              # YAW Left
             cmd.angular.z   = self.speed
-        elif self.char == 'd':
+        elif self.char == 'e':              # YAW Right
             cmd.angular.z   = -1 * self.speed
         
         self.navi_pub.publish(cmd)

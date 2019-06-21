@@ -28,3 +28,15 @@ We are mainly concerned about Image, Odom and Camera Orientation
 ```
 rosbag record -O camera /bebop/image_raw /bebop/states/ardrone3/CameraState/Orientation /bebop/odom
 ```
+
+# Playing Camera Feed
+Camera feed can be played by ROS image viewer at the moment, please enter following command to start ROS image_view
+```
+rosrun image_view image_view image:=/bebop/image_raw raw
+```
+
+# Playing Recorded Data
+Recorded data can be played back using `rosbag`
+```
+rosbag play [file_name]
+```
