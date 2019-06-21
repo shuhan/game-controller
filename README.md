@@ -6,6 +6,13 @@ Navigate search and rescue drone, create a S.L.A.M. map,  communicate with land 
 * bebop_autonomy
 * pytorch
 
+# Build
+`cd` to the cloned directory, then run
+```
+catkin_make
+source devel/setup.bash
+```
+
 # Running Tests
 First launch connect to the bebop wifi and the launch bebop autonomy driver
 ```
