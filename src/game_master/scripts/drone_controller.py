@@ -13,13 +13,14 @@ LANDING     = "Landing   "
 class DroneController:
 
     def __init__(self):
-        self.speed       = 0.3
+        self.speed       = 0.2
         self.status      = ON_GROUND
         self.char        = ''
+        self.kb          = KBHit()
 
-        self.takeoff_pub = rospy.Publisher('/bebop/takeoff', Empty, queue_size=10)
-        self.land_pub    = rospy.Publisher('/bebop/land', Empty, queue_size=10)
-        self.navi_pub    = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=10)
+        self.takeoff_pub = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
+        self.land_pub    = rospy.Publisher('/bebop/land', Empty, queue_size=1)
+        self.navi_pub    = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
         rospy.init_node('drone__controller')
         self.rate = rospy.Rate(100)
 
@@ -48,61 +49,47 @@ class DroneController:
                 self.status = TAKINGOFF
                 self.print_status()
                 rospy.sleep(2)
+                self.kb.clear()
                 self.status = ON_AIR
+                
             elif self.status == ON_AIR:
                 self.land_pub.publish()
                 self.status = LANDING
                 self.print_status()
                 rospy.sleep(2)
+                self.kb.clear()
                 self.status = ON_GROUND
         
     def navigate(self):
         if self.status != ON_AIR:
             return
+        
+        cmd = Twist()
+        
         if self.char == 'w':
-            cmd = Twist()
             cmd.linear.x    = self.speed
-            cmd.linear.y    = 0
-            cmd.linear.z    = 0
-            cmd.angular.z   = 0
-            self.navi_pub.publish(cmd)
-        if self.char == 's':
-            cmd = Twist()
+        elif self.char == 's':
             cmd.linear.x    = -1 * self.speed
-            cmd.linear.y    = 0
-            cmd.linear.z    = 0
-            cmd.angular.z   = 0
-            self.navi_pub.publish(cmd)
-        if self.char == 'a':
-            cmd = Twist()
-            cmd.linear.x    = 0
-            cmd.linear.y    = 0
-            cmd.linear.z    = 0
+        elif self.char == 'a':
             cmd.angular.z   = self.speed
-            self.navi_pub.publish(cmd)
-        if self.char == 'd':
-            cmd = Twist()
-            cmd.linear.x    = 0
-            cmd.linear.y    = 0
-            cmd.linear.z    = 0
+        elif self.char == 'd':
             cmd.angular.z   = -1 * self.speed
-            self.navi_pub.publish(cmd)
+        
+        self.navi_pub.publish(cmd)
 
     def run(self):
-        kb = KBHit()
-        
         self.print_help()
 
         while not rospy.is_shutdown():
             self.rate.sleep()
-            if kb.kbhit():
-                self.char = kb.getch()
+            if self.kb.kbhit():
+                self.char = self.kb.getch()
                 self.adjust_speed()
                 self.takeoff_landing()
                 self.navigate()
             self.print_status()
         
-        kb.set_normal_term()
+        self.kb.set_normal_term()
 
 if __name__ == "__main__":
     try:

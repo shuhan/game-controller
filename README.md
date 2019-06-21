@@ -22,3 +22,9 @@ Then run the drone controller
 ```
 rosrun game_master drone_controller.py
 ```
+
+# Recording data
+We are mainly concerned about Image, Odom and Camera Orientation
+```
+rosbag record -O camera /bebop/image_raw /bebop/states/ardrone3/CameraState/Orientation /bebop/odom
+```
