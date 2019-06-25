@@ -22,7 +22,7 @@ class flight_capture:
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             
-            file_name = datetime.datetime.fromtimestamp(data.header.stamp.secs).strftime('%Y-%m-%d %H:%M:%S.png')
+            file_name = datetime.datetime.fromtimestamp(data.header.stamp.secs).strftime('%Y-%m-%d-%H:%M:%S.png')
             cv2.imwrite(os.path.join(self.data_path, file_name), cv_image)
 
             cv2.imshow("Image window", cv_image)
