@@ -4,11 +4,28 @@ import rospy
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from keyboard import KBHit
+from collections import OrderedDict
 
 ON_GROUND   = "On Ground "
 ON_AIR      = "On Air    "
 TAKINGOFF   = "Taking off"
 LANDING     = "Landing   "
+
+KEY_CONFIGS = OrderedDict([
+    ('w' , 'Forward'),
+    ('s' , 'Reverse'),
+    ('a' , 'Left'),
+    ('d' , 'Right'),
+    ('q' , 'Yaw Left'),
+    ('e' , 'Yaw Right'),
+    (' ' , 'Takeoff/Landing'),
+    ('8' , 'Camera Tilt Up'),
+    ('2' , 'Camera Tilt Down'),
+    ('4' , 'Camera Pitch Left'),
+    ('6' , 'Camera Pitch Right'),
+    ('+' , 'Speed Up'),
+    ('-' , 'Speed Down')
+])
 
 class DroneController:
 
@@ -23,13 +40,19 @@ class DroneController:
         self.navi_pub    = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
         rospy.init_node('drone__controller')
         self.rate = rospy.Rate(100)
+        self.status_init = True
 
     def print_help(self):
-        print('Control:\nw\t: Forward\ns\t: Reverse\nd\t: Right\na\t: Left\ne\t: Yaw Right\nq\t: Yaw Left\nSpace\t: Takeoff/land\n+\t: Increase Speed\n-\t: Decrease Speed')
+        print('Control:')
+        for key, purose in KEY_CONFIGS.items():
+            print("\t{} : {}".format(key, purose))
 
     def print_status(self):
+        if not self.status_init:
+            sys.stdout.write("\033[F") # Cursor up one line
+        else:
+            self.status_init = False
         print("Speed {0} Status {1}".format(self.speed, self.status))
-        sys.stdout.write("\033[F") # Cursor up one line
 
     def adjust_speed(self):
         if self.char == '+':
