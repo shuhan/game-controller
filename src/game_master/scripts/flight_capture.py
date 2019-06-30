@@ -10,7 +10,9 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class flight_capture:
     def __init__(self):
-        
+        self.timestamp = -1
+        self.sequence = 0
+        self.skip_frame = 60    #Set 0 to skip none, 60 means capture every 2 seconds
         self.data_path = os.path.join(os.path.expanduser('~'), 'flight_capture')
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/bebop/image_raw", Image, self.callback)
@@ -22,8 +24,16 @@ class flight_capture:
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
             
-            file_name = datetime.datetime.fromtimestamp(data.header.stamp.secs).strftime('%Y-%m-%d-%H:%M:%S.png')
-            cv2.imwrite(os.path.join(self.data_path, file_name), cv_image)
+            seq = data.header.seq
+
+            if self.skip_frame <= 0 or seq%self.skip_frame == 0:
+                if data.header.stamp.secs != self.timestamp:
+                    self.sequence = 0
+                    self.timestamp = data.header.stamp.secs
+                else:
+                    self.sequence += 1
+                file_name = datetime.datetime.fromtimestamp(data.header.stamp.secs).strftime('%Y-%m-%d-%H:%M:%S-') + str(self.sequence) + '.png'
+                cv2.imwrite(os.path.join(self.data_path, file_name), cv_image)
 
             cv2.imshow("Image window", cv_image)
             cv2.waitKey(3)

@@ -30,6 +30,9 @@ KEY_CONFIGS = OrderedDict([
 class DroneController:
 
     def __init__(self):
+
+        rospy.init_node('drone__controller')
+
         self.speed       = 0.2
         self.status      = ON_GROUND
         self.char        = ''
@@ -38,9 +41,10 @@ class DroneController:
         self.takeoff_pub = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
         self.land_pub    = rospy.Publisher('/bebop/land', Empty, queue_size=1)
         self.navi_pub    = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
-        rospy.init_node('drone__controller')
-        self.rate = rospy.Rate(100)
+        self.cam_control = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
+        self.rate        = rospy.Rate(100)
         self.status_init = True
+        self.cam_cmd     = Twist()
 
     def print_help(self):
         # Upcoming Controller
@@ -110,6 +114,21 @@ class DroneController:
         
         self.navi_pub.publish(cmd)
 
+    def move_cam(self):
+        # Don't want contenious changes
+        if self.char == '8':                # Wall view
+            self.cam_cmd.angular.y = 0
+            self.cam_control.publish(self.cam_cmd)
+        if self.char == '5':                # Field Cover
+            self.cam_cmd.angular.y = -25
+            self.cam_control.publish(self.cam_cmd)
+        if self.char == '2':                # Closer Look
+            self.cam_cmd.angular.y = -48
+            self.cam_control.publish(self.cam_cmd)
+        elif self.char == '0':              # Flying Over
+            self.cam_cmd.angular.y = -70
+            self.cam_control.publish(self.cam_cmd)
+
     def run(self):
         self.print_help()
 
@@ -120,6 +139,7 @@ class DroneController:
                 self.adjust_speed()
                 self.takeoff_landing()
                 self.navigate()
+                self.move_cam()
             self.print_status()
         
         self.kb.set_normal_term()
