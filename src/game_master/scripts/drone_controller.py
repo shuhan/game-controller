@@ -43,9 +43,11 @@ class DroneController:
         self.status_init = True
 
     def print_help(self):
-        print('Control:')
-        for key, purose in KEY_CONFIGS.items():
-            print("\t{} : {}".format(key, purose))
+        # Upcoming Controller
+        # print('Control:')
+        # for key, purose in KEY_CONFIGS.items():
+        #     print("\t{} : {}".format(key, purose))
+        print('Control:\nw\t: Forward\ns\t: Reverse\nd\t: Right\na\t: Left\ne\t: Yaw Right\nq\t: Yaw Left\nr\t: Ascend\nf\t: Descend\nSpace\t: Takeoff/land\n+\t: Increase Speed\n-\t: Decrease Speed')
 
     def print_status(self):
         if not self.status_init:
@@ -101,6 +103,10 @@ class DroneController:
             cmd.angular.z   = self.speed
         elif self.char == 'e':              # YAW Right
             cmd.angular.z   = -1 * self.speed
+        elif self.char == 'r':              # Ascend
+            cmd.linear.z    = self.speed
+        elif self.char == 'f':              # Descend
+            cmd.linear.z    = -1 * self.speed   
         
         self.navi_pub.publish(cmd)
 
