@@ -31,20 +31,23 @@ class DroneController:
 
     def __init__(self):
 
-        rospy.init_node('drone__controller')
+        rospy.init_node('drone_controller')
 
-        self.speed       = 0.2
-        self.status      = ON_GROUND
-        self.char        = ''
-        self.kb          = KBHit()
+        self.speed              = 0.2
+        self.status             = ON_GROUND
+        self.char               = ''
+        self.kb                 = KBHit()
 
-        self.takeoff_pub = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
-        self.land_pub    = rospy.Publisher('/bebop/land', Empty, queue_size=1)
-        self.navi_pub    = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
-        self.cam_control = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
-        self.rate        = rospy.Rate(100)
-        self.status_init = True
-        self.cam_cmd     = Twist()
+        self.takeoff_pub        = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
+        self.land_pub           = rospy.Publisher('/bebop/land', Empty, queue_size=1)
+        self.navi_pub           = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
+        self.takeoff_relay_pub  = rospy.Publisher('/bebop_relay/takeoff', Empty, queue_size=1)
+        self.land_relay_pub     = rospy.Publisher('/bebop_relay/land', Empty, queue_size=1)
+        self.navi_relay_pub     = rospy.Publisher('/bebop_relay/cmd_vel', Twist, queue_size=1)
+        self.cam_control        = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
+        self.rate               = rospy.Rate(100)
+        self.status_init        = True
+        self.cam_cmd            = Twist()
 
     def print_help(self):
         # Upcoming Controller
@@ -75,6 +78,7 @@ class DroneController:
         if self.char == ' ':
             if self.status == ON_GROUND:
                 self.takeoff_pub.publish()
+                self.takeoff_relay_pub.publish()
                 self.status = TAKINGOFF
                 self.print_status()
                 rospy.sleep(2)
@@ -83,6 +87,7 @@ class DroneController:
                 
             elif self.status == ON_AIR:
                 self.land_pub.publish()
+                self.land_relay_pub.publish()
                 self.status = LANDING
                 self.print_status()
                 rospy.sleep(2)
@@ -113,6 +118,7 @@ class DroneController:
             cmd.linear.z    = -1 * self.speed   
         
         self.navi_pub.publish(cmd)
+        self.navi_relay_pub.publish(cmd)
 
     def move_cam(self):
         # Don't want contenious changes
