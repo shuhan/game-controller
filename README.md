@@ -40,3 +40,20 @@ Recorded data can be played back using `rosbag`
 ```
 rosbag play [file_name]
 ```
+
+# Plans
+
+## Plan C
+Let jialin control the dron capture all movements and then play it back.
+Use traditional computer vision techniques with blob detection and AR codes and so on to capture the image of MR. York.
+Can be expanded to blob based floor and object detection using ground facing camera.
+
+## Plan B
+Use AR tags to correct orientation and use plan C like movements from point to point to make it more accurate.
+Either use traditional CV or machine learning based CV depending on what is ready.
+
+## Plan A
+Use machine learning based CV, model movements and control signal, use sensor fusion for localization and mapping. Create SLAM map for navigating ground vehicle.
+
+### Note
+Make sure we follow from plan C to A so that we are ready with plan C for worst case and build incrimentally.
