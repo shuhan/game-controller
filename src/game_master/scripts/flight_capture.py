@@ -12,7 +12,7 @@ class flight_capture:
     def __init__(self):
         self.timestamp = -1
         self.sequence = 0
-        self.skip_frame = 60    #Set 0 to skip none, 60 means capture every 2 seconds
+        self.skip_frame = 15    #Set 0 to skip none, 60 means capture every 2 seconds
         self.data_path = os.path.join(os.path.expanduser('~'), 'flight_capture')
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/bebop/image_raw", Image, self.callback)
