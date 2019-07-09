@@ -3,6 +3,7 @@ import sys
 import rospy
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
+from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
 from keyboard import KBHit
 from collections import OrderedDict
 
@@ -34,10 +35,14 @@ class DroneController:
         rospy.init_node('drone_controller')
 
         self.speed              = 0.2
+        self.altitude           = 0
+        self.camera_tilt        = 0
+        self.camera_pan         = 0
+        self.battery            = 0
         self.status             = ON_GROUND
         self.char               = ''
         self.kb                 = KBHit()
-
+        # Publishers
         self.takeoff_pub        = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
         self.land_pub           = rospy.Publisher('/bebop/land', Empty, queue_size=1)
         self.navi_pub           = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
@@ -45,9 +50,24 @@ class DroneController:
         self.land_relay_pub     = rospy.Publisher('/bebop_relay/land', Empty, queue_size=1)
         self.navi_relay_pub     = rospy.Publisher('/bebop_relay/cmd_vel', Twist, queue_size=1)
         self.cam_control        = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
+        # Subscribers
+        self.altitude_sub       = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/AltitudeChanged", Ardrone3PilotingStateAltitudeChanged, self.altitude_changed)
+        self.orientation_sub    = rospy.Subscriber("/bebop/states/ardrone3/CameraState/Orientation", Ardrone3CameraStateOrientation, self.cammera_orientation_changed)
+        self.battery_sub        = rospy.Subscriber("/bebop/states/common/CommonState/BatteryStateChanged", CommonCommonStateBatteryStateChanged, self.battery_status_changed)
+
         self.rate               = rospy.Rate(100)
         self.status_init        = True
         self.cam_cmd            = Twist()
+
+    def altitude_changed(self, data):
+        self.altitude = data.altitude
+
+    def cammera_orientation_changed(self, data):
+        self.camera_tilt = data.tilt
+        self.camera_pan  = data.pan
+
+    def battery_status_changed(self, data):
+        self.battery = data.percent
 
     def print_help(self):
         # Upcoming Controller
@@ -61,7 +81,7 @@ class DroneController:
             sys.stdout.write("\033[F") # Cursor up one line
         else:
             self.status_init = False
-        print("Speed {0} Status {1}".format(self.speed, self.status))
+        print("Speed {0} Altitude {1} Tilt {2} Pan {3} Battery {4}% Status {5}".format(self.speed, self.altitude, self.camera_tilt, self.camera_pan, self.battery, self.status))
 
     def adjust_speed(self):
         if self.char == '+':
@@ -121,18 +141,27 @@ class DroneController:
         self.navi_relay_pub.publish(cmd)
 
     def move_cam(self):
+        # 0, -25, -48, -70
         # Don't want contenious changes
-        if self.char == '8':                # Wall view
-            self.cam_cmd.angular.y = 0
+        if self.char == '8':
+            self.camera_tilt += 1
+            self.cam_cmd.angular.y = self.camera_tilt
+            self.cam_cmd.angular.z = self.camera_pan
             self.cam_control.publish(self.cam_cmd)
-        if self.char == '5':                # Field Cover
-            self.cam_cmd.angular.y = -25
+        if self.char == '2':
+            self.camera_tilt -= 1
+            self.cam_cmd.angular.y = self.camera_tilt
+            self.cam_cmd.angular.z = self.camera_pan
             self.cam_control.publish(self.cam_cmd)
-        if self.char == '2':                # Closer Look
-            self.cam_cmd.angular.y = -48
+        if self.char == '4':
+            self.camera_pan -= 1
+            self.cam_cmd.angular.y = self.camera_tilt
+            self.cam_cmd.angular.z = self.camera_pan
             self.cam_control.publish(self.cam_cmd)
-        elif self.char == '0':              # Flying Over
-            self.cam_cmd.angular.y = -70
+        if self.char == '6':
+            self.camera_pan += 1
+            self.cam_cmd.angular.y = self.camera_tilt
+            self.cam_cmd.angular.z = self.camera_pan
             self.cam_control.publish(self.cam_cmd)
 
     def run(self):
