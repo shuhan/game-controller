@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
 from keyboard import KBHit
 from collections import OrderedDict
+from drone import BebopDrone
 
 ON_GROUND   = "On Ground "
 ON_AIR      = "On Air    "
@@ -34,40 +35,11 @@ class DroneController:
 
         rospy.init_node('drone_controller')
 
-        self.speed              = 0.2
-        self.altitude           = 0
-        self.camera_tilt        = 0
-        self.camera_pan         = 0
-        self.battery            = 0
-        self.status             = ON_GROUND
-        self.char               = ''
-        self.kb                 = KBHit()
-        # Publishers
-        self.takeoff_pub        = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
-        self.land_pub           = rospy.Publisher('/bebop/land', Empty, queue_size=1)
-        self.navi_pub           = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
-        self.takeoff_relay_pub  = rospy.Publisher('/bebop_relay/takeoff', Empty, queue_size=1)
-        self.land_relay_pub     = rospy.Publisher('/bebop_relay/land', Empty, queue_size=1)
-        self.navi_relay_pub     = rospy.Publisher('/bebop_relay/cmd_vel', Twist, queue_size=1)
-        self.cam_control        = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
-        # Subscribers
-        self.altitude_sub       = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/AltitudeChanged", Ardrone3PilotingStateAltitudeChanged, self.altitude_changed)
-        self.orientation_sub    = rospy.Subscriber("/bebop/states/ardrone3/CameraState/Orientation", Ardrone3CameraStateOrientation, self.cammera_orientation_changed)
-        self.battery_sub        = rospy.Subscriber("/bebop/states/common/CommonState/BatteryStateChanged", CommonCommonStateBatteryStateChanged, self.battery_status_changed)
-
-        self.rate               = rospy.Rate(100)
-        self.status_init        = True
-        self.cam_cmd            = Twist()
-
-    def altitude_changed(self, data):
-        self.altitude = data.altitude
-
-    def cammera_orientation_changed(self, data):
-        self.camera_tilt = data.tilt
-        self.camera_pan  = data.pan
-
-    def battery_status_changed(self, data):
-        self.battery = data.percent
+        self.char           = ''
+        self.kb             = KBHit()
+        self.drone          = BebopDrone()
+        self.rate           = rospy.Rate(100)
+        self.status_init    = True
 
     def print_help(self):
         # Upcoming Controller
@@ -81,88 +53,54 @@ class DroneController:
             sys.stdout.write("\033[F") # Cursor up one line
         else:
             self.status_init = False
-        print("Speed {0} Altitude {1} Tilt {2} Pan {3} Battery {4}% Status {5}".format(self.speed, self.altitude, self.camera_tilt, self.camera_pan, self.battery, self.status))
+        print("Speed {0} Altitude {1:.2f} Tilt {2} Pan {3} Battery {4}% Status {5}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.camera_pan, self.drone.battery, self.drone.getStateStr()))
 
     def adjust_speed(self):
         if self.char == '+':
-            self.speed += 0.1
+            self.drone.movement_speed += 0.1
         if self.char == '-':
-            self.speed -= 0.1
+            self.drone.movement_speed -= 0.1
         
-        if self.speed > 1.0:
-            self.speed = 1.0
-        if self.speed < 0.1:
-            self.speed = 0.1
+        if self.drone.movement_speed > 1.0:
+            self.drone.movement_speed = 1.0
+        if self.drone.movement_speed < 0.1:
+            self.drone.movement_speed = 0.1
 
     def takeoff_landing(self):
         if self.char == ' ':
-            if self.status == ON_GROUND:
-                self.takeoff_pub.publish()
-                self.takeoff_relay_pub.publish()
-                self.status = TAKINGOFF
-                self.print_status()
-                rospy.sleep(2)
-                self.kb.clear()
-                self.status = ON_AIR
-                
-            elif self.status == ON_AIR:
-                self.land_pub.publish()
-                self.land_relay_pub.publish()
-                self.status = LANDING
-                self.print_status()
-                rospy.sleep(2)
-                self.kb.clear()
-                self.status = ON_GROUND
-        
+            self.drone.takeoffLanding()
+            self.kb.clear()
+    
     def navigate(self):
-        if self.status != ON_AIR:
-            return
-        
-        cmd = Twist()
         
         if self.char == 'w':                # Forward
-            cmd.linear.x    = self.speed
+            self.drone.forward()
         elif self.char == 's':              # Reverse
-            cmd.linear.x    = -1 * self.speed
+            self.drone.reverse()
         elif self.char == 'a':              # Left
-            cmd.linear.y   = self.speed
+            self.drone.left()
         elif self.char == 'd':              # Right
-            cmd.linear.y   = -1 * self.speed
+            self.drone.right()
         elif self.char == 'q':              # YAW Left
-            cmd.angular.z   = self.speed
+            self.drone.yawLeft()
         elif self.char == 'e':              # YAW Right
-            cmd.angular.z   = -1 * self.speed
+            self.drone.yawRight()
         elif self.char == 'r':              # Ascend
-            cmd.linear.z    = self.speed
+            self.drone.ascend()
         elif self.char == 'f':              # Descend
-            cmd.linear.z    = -1 * self.speed   
-        
-        self.navi_pub.publish(cmd)
-        self.navi_relay_pub.publish(cmd)
+            self.drone.descend()
 
     def move_cam(self):
         # 0, -25, -48, -70
         # Don't want contenious changes
         if self.char == '8':
-            self.camera_tilt += 1
-            self.cam_cmd.angular.y = self.camera_tilt
-            self.cam_cmd.angular.z = self.camera_pan
-            self.cam_control.publish(self.cam_cmd)
+            self.drone.cameraTiltUp()
         if self.char == '2':
-            self.camera_tilt -= 1
-            self.cam_cmd.angular.y = self.camera_tilt
-            self.cam_cmd.angular.z = self.camera_pan
-            self.cam_control.publish(self.cam_cmd)
+            self.drone.cameraTiltDown()
         if self.char == '4':
-            self.camera_pan -= 1
-            self.cam_cmd.angular.y = self.camera_tilt
-            self.cam_cmd.angular.z = self.camera_pan
-            self.cam_control.publish(self.cam_cmd)
+            self.drone.cameraPanLeft()
         if self.char == '6':
-            self.camera_pan += 1
-            self.cam_cmd.angular.y = self.camera_tilt
-            self.cam_cmd.angular.z = self.camera_pan
-            self.cam_control.publish(self.cam_cmd)
+            self.drone.cameraPanRight()
 
     def run(self):
         self.print_help()
@@ -176,6 +114,7 @@ class DroneController:
                 self.navigate()
                 self.move_cam()
             self.print_status()
+            self.drone.process()
         
         self.kb.set_normal_term()
 

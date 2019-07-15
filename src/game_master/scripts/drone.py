@@ -59,8 +59,6 @@ class BebopDrone:
         self.battery_sub    = rospy.Subscriber("/bebop/states/common/CommonState/BatteryStateChanged", CommonCommonStateBatteryStateChanged, self.onBatteryLevelChanged)
         self.status_sub     = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/FlyingStateChanged", Ardrone3PilotingStateFlyingStateChanged, self.onStateChanged)
         # Common setup
-        self.rate           = rospy.Rate(frequency)
-        self.status_init    = True
         self.cam_cmd        = Twist()
         self.navi_cmd       = Twist()
 
@@ -73,17 +71,17 @@ class BebopDrone:
 
     def getStateStr(self):
         if self.state == self.FLIGHT_STATE_UNKNOWN:
-            return "Unknown"
+            return "Unknown   "
         elif self.state == self.FLIGHT_STATE_TAKING_OFF:
             return "Taking off"
         elif self.state == self.FLIGHT_STATE_NOT_FLYING:
-            return "On Ground"
+            return "On Ground "
         elif self.state == self.FLIGHT_STATE_MANOEUVRING:
-            return "Piloting"
+            return "Piloting  "
         elif self.state == self.FLIGHT_STATE_LANDING:
-            return "Landing"
+            return "Landing  "
         elif self.state == self.FLIGHT_STATE_HOVERING:
-            return "Hovering"
+            return "Hovering  "
 
     #-----------------------------------------------------------------------
     # Status and update from drone
@@ -253,19 +251,16 @@ class BebopDrone:
     #-----------------------------------------------------------------------
 
     def navigationCmdChanged(self):
-        return self.navi_cmd.linear.x != 0 and self.navi_cmd.linear.y != 0 and self.navi_cmd.linear.y != 0 and self.navi_cmd.angular.x != 0 and self.navi_cmd.angular.y != 0 and self.navi_cmd.angular.z != 0
+        return self.navi_cmd.linear.x != 0 or self.navi_cmd.linear.y != 0 or self.navi_cmd.linear.z != 0 or self.navi_cmd.angular.x != 0 or self.navi_cmd.angular.y != 0 or self.navi_cmd.angular.z != 0
     
     def process(self):
         '''
         Send all pending messages and spin once
         '''
-
         # Check if Rospy shall be running
         if rospy.is_shutdown():
             return
 
-        self.rate.sleep()
-        
         # Process Navigation Command
         if self.navigationCmdChanged():
             self.navi_pub.publish(self.navi_cmd)
