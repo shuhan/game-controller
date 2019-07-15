@@ -28,9 +28,9 @@ class BebopDrone:
     FLIGHT_STATE_UNKNOWN    = -1
 
     def __init__(self, frequency=100, movement_speed=0.3, turning_speed=0.5, annonymous=False):
-
-        rospy.init_node('bebop__drone', anonymous=annonymous)
-
+        '''
+        Rospy node must be initialized before instantiating BebopDrone
+        '''
         self.movement_speed = movement_speed
         self.turning_speed  = turning_speed
         self.state          = self.FLIGHT_STATE_UNKNOWN
@@ -70,6 +70,20 @@ class BebopDrone:
         '''
         self.movement_speed = movement_speed
         self.turning_speed  = turning_speed
+
+    def getStateStr(self):
+        if self.state == self.FLIGHT_STATE_UNKNOWN:
+            return "Unknown"
+        elif self.state == self.FLIGHT_STATE_TAKING_OFF:
+            return "Taking off"
+        elif self.state == self.FLIGHT_STATE_NOT_FLYING:
+            return "On Ground"
+        elif self.state == self.FLIGHT_STATE_MANOEUVRING:
+            return "Piloting"
+        elif self.state == self.FLIGHT_STATE_LANDING:
+            return "Landing"
+        elif self.state == self.FLIGHT_STATE_HOVERING:
+            return "Hovering"
 
     #-----------------------------------------------------------------------
     # Status and update from drone
@@ -249,6 +263,8 @@ class BebopDrone:
         # Check if Rospy shall be running
         if rospy.is_shutdown():
             return
+
+        self.rate.sleep()
         
         # Process Navigation Command
         if self.navigationCmdChanged():
