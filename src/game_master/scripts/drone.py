@@ -4,7 +4,11 @@ Module contains classes and interfaces for operating bebop drone using bebop_aut
 
 import sys
 import rospy
+import cv2
+import numpy as np
+from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Empty
+from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateFlyingStateChanged, Ardrone3PilotingStateAltitudeChanged, Ardrone3PilotingStateAttitudeChanged, Ardrone3PilotingStateSpeedChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
 
@@ -31,6 +35,7 @@ class BebopDrone:
         '''
         Rospy node must be initialized before instantiating BebopDrone
         '''
+        self.bridge         = CvBridge()
         self.movement_speed = movement_speed
         self.turning_speed  = turning_speed
         self.state          = self.FLIGHT_STATE_UNKNOWN
@@ -45,6 +50,7 @@ class BebopDrone:
         self.speedX         = 0
         self.speedY         = 0
         self.speedZ         = 0
+        self.frame          = None
 
         # Publishers
         self.takeoff_pub    = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
@@ -58,6 +64,7 @@ class BebopDrone:
         self.orientation_sub= rospy.Subscriber("/bebop/states/ardrone3/CameraState/Orientation", Ardrone3CameraStateOrientation, self.onCameraOrientationChanged)
         self.battery_sub    = rospy.Subscriber("/bebop/states/common/CommonState/BatteryStateChanged", CommonCommonStateBatteryStateChanged, self.onBatteryLevelChanged)
         self.status_sub     = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/FlyingStateChanged", Ardrone3PilotingStateFlyingStateChanged, self.onStateChanged)
+        self.image_sub      = rospy.Subscriber("/bebop/image_raw", Image, self.onFrameReceived)
         # Common setup
         self.cam_cmd        = Twist()
         self.navi_cmd       = Twist()
@@ -127,6 +134,18 @@ class BebopDrone:
         '''
         self.camera_tilt = data.tilt
         self.camera_pan  = data.pan
+
+    def onFrameReceived(self, data):
+        '''
+        Callback function for camera frame received
+        '''
+        try:
+            img =  self.bridge.imgmsg_to_cv2(data, "bgr8")
+            self.frame = img.copy()
+            cv2.imshow('Bebop', img)
+            cv2.waitKey(1)
+        except CvBridgeError as e:
+            print(e)
 
     #-----------------------------------------------------------------------
     # Control the drone

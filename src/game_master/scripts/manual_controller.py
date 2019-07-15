@@ -29,7 +29,7 @@ KEY_CONFIGS = OrderedDict([
     ('-' , 'Speed Down')
 ])
 
-class DroneController:
+class ManualController:
 
     def __init__(self):
 
@@ -120,7 +120,7 @@ class DroneController:
 
 if __name__ == "__main__":
     try:
-        dc = DroneController()
+        dc = ManualController()
         dc.run()
     except rospy.ROSInterruptException:
         pass
