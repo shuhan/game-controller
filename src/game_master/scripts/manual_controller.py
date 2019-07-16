@@ -7,6 +7,7 @@ from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraS
 from keyboard import KBHit
 from collections import OrderedDict
 from drone import BebopDrone
+from vision import DroneVision
 
 ON_GROUND   = "On Ground "
 ON_AIR      = "On Air    "
@@ -37,7 +38,8 @@ class ManualController:
 
         self.char           = ''
         self.kb             = KBHit()
-        self.drone          = BebopDrone()
+        self.vision         = DroneVision()
+        self.drone          = BebopDrone(self.vision.findFrontGuide)
         self.rate           = rospy.Rate(100)
         self.status_init    = True
 

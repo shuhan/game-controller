@@ -31,7 +31,7 @@ class BebopDrone:
     FLIGHT_STATE_LANDING    = 4
     FLIGHT_STATE_UNKNOWN    = -1
 
-    def __init__(self, frequency=100, movement_speed=0.3, turning_speed=0.5, annonymous=False):
+    def __init__(self, frame_callback=None, skip=5, frequency=100, movement_speed=0.3, turning_speed=0.5, annonymous=False):
         '''
         Rospy node must be initialized before instantiating BebopDrone
         '''
@@ -39,6 +39,8 @@ class BebopDrone:
         self.movement_speed = movement_speed
         self.turning_speed  = turning_speed
         self.state          = self.FLIGHT_STATE_UNKNOWN
+        self.frame_callback = frame_callback
+        self.frame_skip     = skip
         # Default drone status
         self.altitude       = 0
         self.camera_tilt    = 0
@@ -142,6 +144,11 @@ class BebopDrone:
         try:
             img =  self.bridge.imgmsg_to_cv2(data, "bgr8")
             self.frame = img.copy()
+            if self.frame_callback is not None:
+                seq = data.header.seq
+                # For now lets process every 5 frames
+                if self.frame_skip == 0 or seq % self.frame_skip == 0:
+                    self.frame_callback(self.frame)
             cv2.imshow('Bebop', img)
             cv2.waitKey(1)
         except CvBridgeError as e:
@@ -193,19 +200,21 @@ class BebopDrone:
         self.navi_cmd.linear.y = -1 * self.movement_speed
         return self
 
+    def turn(self, speed):
+        self.navi_cmd.angular.z = speed
+        return self
+
     def yawLeft(self):
         '''
         Yaw the drone on left
         '''
-        self.navi_cmd.angular.z = self.turning_speed
-        return self
+        return self.turn(self.turning_speed)
 
     def yawRight(self):
         '''
         Yaw the drone on right
         '''
-        self.navi_cmd.angular.z = -1 * self.turning_speed
-        return self
+        return self.turn(-1 * self.turning_speed)
 
     def ascend(self):
         '''
