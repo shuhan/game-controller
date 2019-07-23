@@ -18,16 +18,21 @@ class DroneVision:
         self.vertical_fov   = vfov
         self.horizontal_fov = hfov
 
-    def calculateFrontalDistance(self, origImg):
+    def calculateFrontalDistance(self, origImg, Display=True):
         height, width, _        = origImg.shape
-        guideLine, guideTheta   = self.findFrontGuide(origImg)
+        guideLine, guideTheta   = self.findFrontGuide(origImg, False)
 
-        left_angle = (1 - (guideLine[0][1] / height)) * self.vertical_fov
-        right_angle = (1 - (guideLine[1][1] / height)) * self.vertical_fov
+        if guideLine is not None:
+            left_angle = (float(guideLine[0][1]) / float(height)) * self.vertical_fov
+            right_angle = (float(guideLine[1][1]) / float(height)) * self.vertical_fov
 
-        print(left_angle, right_angle)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(origImg,'%d %d' % (left_angle, right_angle),(10,50), font, 1,(255,255,255), 2,cv2.LINE_AA)
+
         # Calculate left distance
         # Calculate right distance
+        if Display:
+            cv2.imshow('Distance', origImg)
 
     def calculateIntersects(self, rho, theta, width, height):
         a = np.cos(theta)
@@ -70,8 +75,8 @@ class DroneVision:
 
         return points, intersects
 
-    def findFrontGuide(self, origImg):
-        start = time.time()
+    def findFrontGuide(self, origImg, Display=True):
+        # start = time.time()
 
         im = np.float32(origImg) / 255.0
 
@@ -95,7 +100,7 @@ class DroneVision:
         halfPi      = math.pi/2.0
 
         if lines is not None:
-            print("Lines found: ", lines.shape)
+            # print("Lines found: ", lines.shape)
             for line in lines:
                 for rho,theta in line:
 
@@ -114,17 +119,21 @@ class DroneVision:
 
                     #cv2.line(origImg, points[0], points[1], (0,0,255), 2)
         else:
-            print("No line detected")
+            '''
+            Line not found
+            '''
+            # print("No line detected")
 
         if guideLine is not None:
             cv2.line(origImg, guideLine[0], guideLine[1], (0,255,0), 2)
 
-        cv2.imshow('Front Guide Line', origImg)
-        # cv2.imshow('Edges', edges)
-        # cv2.imshow('Magnitude', thresh)
+        if Display:
+            cv2.imshow('Front Guide Line', origImg)
+            # cv2.imshow('Edges', edges)
+            # cv2.imshow('Magnitude', thresh)
         
-        end = time.time()
+        # end = time.time()
 
-        print(end - start)
+        # print(end - start)
 
         return guideLine, guideTheta
