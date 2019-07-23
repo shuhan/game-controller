@@ -36,12 +36,13 @@ class ManualController:
 
         rospy.init_node('drone_controller')
 
-        self.char           = ''
-        self.kb             = KBHit()
-        self.vision         = DroneVision()
-        self.drone          = BebopDrone(self.vision.findFrontGuide)
-        self.rate           = rospy.Rate(100)
-        self.status_init    = True
+        self.char                   = ''
+        self.kb                     = KBHit()
+        self.drone                  = BebopDrone()
+        self.vision                 = DroneVision(self.drone)
+        self.drone.frame_callback   = self.vision.calculateFrontalDistance
+        self.rate                   = rospy.Rate(100)
+        self.status_init            = True
 
     def print_help(self):
         # Upcoming Controller

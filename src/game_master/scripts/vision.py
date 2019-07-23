@@ -13,6 +13,22 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class DroneVision:
 
+    def __init__(self, drone, vfov=45, hfov=80):
+        self.drone          = drone
+        self.vertical_fov   = vfov
+        self.horizontal_fov = hfov
+
+    def calculateFrontalDistance(self, origImg):
+        height, width, _        = origImg.shape
+        guideLine, guideTheta   = self.findFrontGuide(origImg)
+
+        left_angle = (1 - (guideLine[0][1] / height)) * self.vertical_fov
+        right_angle = (1 - (guideLine[1][1] / height)) * self.vertical_fov
+
+        print(left_angle, right_angle)
+        # Calculate left distance
+        # Calculate right distance
+
     def calculateIntersects(self, rho, theta, width, height):
         a = np.cos(theta)
         b = np.sin(theta)
@@ -103,7 +119,7 @@ class DroneVision:
         if guideLine is not None:
             cv2.line(origImg, guideLine[0], guideLine[1], (0,255,0), 2)
 
-        cv2.imshow('Processed', origImg)
+        cv2.imshow('Front Guide Line', origImg)
         # cv2.imshow('Edges', edges)
         # cv2.imshow('Magnitude', thresh)
         
