@@ -19,18 +19,27 @@ class DroneVision:
         self.horizontal_fov = hfov
 
     def calculateFrontalDistance(self, origImg, Display=True):
-        height, width, _        = origImg.shape
-        guideLine, guideTheta   = self.findFrontGuide(origImg, False)
+        height, _, _        = origImg.shape
+        guideLine, _        = self.findFrontGuide(origImg, False)
 
         if guideLine is not None:
-            left_angle = (float(guideLine[0][1]) / float(height)) * self.vertical_fov
-            right_angle = (float(guideLine[1][1]) / float(height)) * self.vertical_fov
+            # Calculate distance to front guide
+            yvals                       = np.array([float(guideLine[0][1]), float(guideLine[1][1])])
+            phi                         = (self.vertical_fov/2) - (((height - yvals) / height) * self.vertical_fov)
+            theta                       = self.drone.camera_tilt
+            zeta                        = np.degrees(self.drone.pitch)
+            angle                       = np.radians(90 - (phi - theta - zeta))
+            distance                    = self.drone.altitude * np.tan(angle)
+            average_distance            = np.average(distance)
+            self.drone.guide_distance   = average_distance
+            
+            # Evaluate if guide is good
+            # A good guide gives rough estimation with ±20 cm error
+            # How do we determine if the guide is a good guide
 
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(origImg,'%d %d' % (left_angle, right_angle),(10,50), font, 1,(255,255,255), 2,cv2.LINE_AA)
+            cv2.putText(origImg,'%.2f : %.2f - %.2f' % (distance[0], distance[1], average_distance), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
 
-        # Calculate left distance
-        # Calculate right distance
         if Display:
             cv2.imshow('Distance', origImg)
 

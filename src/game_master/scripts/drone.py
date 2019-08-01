@@ -42,7 +42,7 @@ class BebopDrone:
         self.frame_callback = frame_callback
         self.frame_skip     = skip
         # Default drone status
-        self.altitude       = 0
+        self.altitude       = 0.03
         self.camera_tilt    = 0
         self.camera_pan     = 0
         self.battery        = 0
@@ -52,6 +52,7 @@ class BebopDrone:
         self.speedX         = 0
         self.speedY         = 0
         self.speedZ         = 0
+        self.guide_distance = 0
         self.frame          = None
 
         # Publishers
