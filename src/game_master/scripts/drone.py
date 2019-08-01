@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Empty
+from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateFlyingStateChanged, Ardrone3PilotingStateAltitudeChanged, Ardrone3PilotingStateAttitudeChanged, Ardrone3PilotingStateSpeedChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
@@ -35,31 +36,36 @@ class BebopDrone:
         '''
         Rospy node must be initialized before instantiating BebopDrone
         '''
-        self.bridge         = CvBridge()
-        self.movement_speed = movement_speed
-        self.turning_speed  = turning_speed
-        self.state          = self.FLIGHT_STATE_UNKNOWN
-        self.frame_callback = frame_callback
-        self.frame_skip     = skip
+        self.bridge             = CvBridge()
+        self.movement_speed     = movement_speed
+        self.turning_speed      = turning_speed
+        self.state              = self.FLIGHT_STATE_UNKNOWN
+        self.frame_callback     = frame_callback
+        self.frame_skip         = skip
         # Default drone status
-        self.altitude       = 0.03
-        self.camera_tilt    = 0
-        self.camera_pan     = 0
-        self.battery        = 0
-        self.roll           = 0
-        self.pitch          = 0
-        self.yaw            = 0
-        self.speedX         = 0
-        self.speedY         = 0
-        self.speedZ         = 0
-        self.guide_distance = 0
-        self.frame          = None
+        self.altitude           = 0.03
+        self.camera_tilt        = 0
+        self.camera_pan         = 0
+        self.battery            = 0
+        self.roll               = 0
+        self.pitch              = 0
+        self.yaw                = 0
+        self.speedX             = 0
+        self.speedY             = 0
+        self.speedZ             = 0
+        self.guide_distance     = 0
+        self.frame              = None
+        self.guideLine          = None
+        self.guideDistance      = 0
+        self.guideTheta         = 0
+        self.guideAngularError  = 0
 
         # Publishers
         self.takeoff_pub    = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
         self.land_pub       = rospy.Publisher('/bebop/land', Empty, queue_size=1)
         self.navi_pub       = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
         self.cam_control    = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
+        self.record_control = rospy.Publisher('/bebop/record', Bool, queue_size=1)
         # Subscribers
         self.speed_sub      = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/SpeedChanged", Ardrone3PilotingStateSpeedChanged, self.onSpeedChanged)
         self.altitude_sub   = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/AltitudeChanged", Ardrone3PilotingStateAltitudeChanged, self.onAltitudeChanged)
@@ -164,6 +170,7 @@ class BebopDrone:
         if On Ground: Turn on the roters and start flying
         else if flying: Turn the roters off and land the drone
         '''
+        self.record_control.publish(False)
         if self.state == self.FLIGHT_STATE_NOT_FLYING or self.state == self.FLIGHT_STATE_UNKNOWN:
             self.takeoff_pub.publish()
         elif self.state == self.FLIGHT_STATE_HOVERING or self.state == self.FLIGHT_STATE_MANOEUVRING:
