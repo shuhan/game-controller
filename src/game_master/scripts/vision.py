@@ -19,8 +19,8 @@ class DroneVision:
         self.horizontal_fov = hfov
 
     def calculateFrontalDistance(self, origImg, Display=True):
-        height, _, _        = origImg.shape
-        guideLine, _        = self.findFrontGuide(origImg, False)
+        height, _, _                    = origImg.shape
+        guideLine, guideTheta           = self.findFrontGuide(origImg, False)
 
         if guideLine is not None:
             # Calculate distance to front guide
@@ -30,15 +30,18 @@ class DroneVision:
             zeta                        = np.degrees(self.drone.pitch)
             angle                       = np.radians(90 - (phi - theta - zeta))
             distance                    = self.drone.altitude * np.tan(angle)
-            average_distance            = np.average(distance)
-            self.drone.guide_distance   = average_distance
+            averageDistance             = np.average(distance)
+            self.drone.guideDistance    = averageDistance
+            self.drone.guideTheta       = guideTheta
             
             # Evaluate if guide is good
             # A good guide gives rough estimation with ±20 cm error
             # How do we determine if the guide is a good guide
 
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(origImg,'%.2f : %.2f - %.2f' % (distance[0], distance[1], average_distance), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
+            if Display:
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.line(origImg, guideLine[0], guideLine[1], (0,255,0), 2)
+                cv2.putText(origImg,'%.2f : %.2f - %.2f' % (distance[0], distance[1], averageDistance), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
 
         if Display:
             cv2.imshow('Distance', origImg)
@@ -133,7 +136,7 @@ class DroneVision:
             '''
             # print("No line detected")
 
-        if guideLine is not None:
+        if guideLine is not None and Display:
             cv2.line(origImg, guideLine[0], guideLine[1], (0,255,0), 2)
 
         if Display:
