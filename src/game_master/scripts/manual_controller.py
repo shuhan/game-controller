@@ -118,8 +118,8 @@ class ManualController:
                 self.move_cam()
             self.print_status()
             # Temporary auto alignment
-            # if self.drone.guideLine is not None and abs(self.drone.guideAngularError) > 0.01:
-            #     self.drone.turn(-0.5*self.drone.guideAngularError)
+            if self.drone.guideLine is not None and abs(self.drone.guideAngularError) > 0.01:
+                self.drone.turn(1.0*self.drone.guideAngularError)
             self.drone.process()
         
         self.kb.set_normal_term()

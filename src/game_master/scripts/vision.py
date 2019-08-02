@@ -13,7 +13,7 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class DroneVision:
 
-    def __init__(self, drone, vfov=45, hfov=80, expectedDistance = 7.50):
+    def __init__(self, drone, vfov=45, hfov=80, expectedDistance = 6.50):
         self.drone              = drone
         self.vertical_fov       = vfov
         self.horizontal_fov     = hfov
@@ -21,7 +21,7 @@ class DroneVision:
 
     def calculateFrontalDistance(self, origImg, Display=True):
         height, _, _                        = origImg.shape
-        guideLine, guideTheta               = self.findFrontGuide(origImg, True)
+        guideLine, guideTheta               = self.findFrontGuide(origImg, False)
         
         # Always update the guide line here
         self.drone.guideLine                = guideLine
@@ -39,7 +39,7 @@ class DroneVision:
             self.drone.guideDistance        = averageDistance
             self.drone.guideTheta           = guideTheta
             self.drone.guideAngularError    = np.radians(90) - guideTheta
-            self.drone.goodGuide            = averageDistance >= self.expectedDistance * 0.9 and averageDistance <= self.expectedDistance * 1.10
+            self.drone.goodGuide            = averageDistance >= self.expectedDistance - 0.5 and averageDistance <= self.expectedDistance + 0.5
 
             # Evaluate if guide is good
             # A good guide gives rough estimation with 20 cm error
@@ -52,8 +52,10 @@ class DroneVision:
                     line_color = (0, 0, 255)
                     # Delibarately force it to ignore the line
                     self.guideLine = None
+                else:
+                    self.expectedDistance = averageDistance
                 cv2.line(origImg, guideLine[0], guideLine[1], line_color, 2)
-                cv2.putText(origImg,'%.2f : %.2f - %.2f' % (distance[0], distance[1], averageDistance), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
+                cv2.putText(origImg,'%.2f : %.2f - %.2f : %.2f' % (distance[0], distance[1], averageDistance, self.expectedDistance), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
 
         if Display:
             cv2.imshow('Distance', origImg)
