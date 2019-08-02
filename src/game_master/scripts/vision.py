@@ -18,10 +18,11 @@ class DroneVision:
         self.vertical_fov       = vfov
         self.horizontal_fov     = hfov
         self.expectedDistance   = expectedDistance
+        self.frameTime          = 0
 
-    def calculateFrontalDistance(self, origImg, Display=True):
+    def calculateFrontalDistance(self, origImg, frameTime, Display=True):
         height, _, _                        = origImg.shape
-        guideLine, guideTheta               = self.findFrontGuide(origImg, False)
+        guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, False)
         
         # Always update the guide line here
         self.drone.guideLine                = guideLine
@@ -45,6 +46,10 @@ class DroneVision:
             # A good guide gives rough estimation with 20 cm error
             # How do we determine if the guide is a good guide
 
+            if self.frameTime > 0 and self.drone.state != self.drone.FLIGHT_STATE_NOT_FLYING:
+                self.expectedDistance = self.expectedDistance - (self.drone.speedX * (frameTime - self.frameTime))
+                self.frameTime = self.frameTime - frameTime
+
             if Display:
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 line_color = (0, 255, 0)
@@ -53,9 +58,10 @@ class DroneVision:
                     # Delibarately force it to ignore the line
                     self.guideLine = None
                 else:
-                    self.expectedDistance = averageDistance
+                    if averageDistance < self.expectedDistance:
+                        self.expectedDistance = averageDistance
                 cv2.line(origImg, guideLine[0], guideLine[1], line_color, 2)
-                cv2.putText(origImg,'%.2f : %.2f - %.2f : %.2f' % (distance[0], distance[1], averageDistance, self.expectedDistance), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
+                cv2.putText(origImg,'%.2f : %.2f - %.2f : %.2f - %.2f' % (distance[0], distance[1], averageDistance, self.expectedDistance, self.drone.speedX), (10,50), font, 1, (255,255,255), 2, cv2.LINE_AA)
 
         if Display:
             cv2.imshow('Distance', origImg)
@@ -101,7 +107,7 @@ class DroneVision:
 
         return points, intersects
 
-    def findFrontGuide(self, origImg, Display=True):
+    def findFrontGuide(self, origImg, frameTime, Display=True):
         # start = time.time()
 
         im = np.float32(origImg) / 255.0

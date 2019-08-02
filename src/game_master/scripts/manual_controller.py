@@ -71,6 +71,7 @@ class ManualController:
 
     def takeoff_landing(self):
         if self.char == ' ':
+            self.drone.cameraControl(-10, 0)
             self.drone.takeoffLanding()
             self.kb.clear()
     
@@ -118,8 +119,13 @@ class ManualController:
                 self.move_cam()
             self.print_status()
             # Temporary auto alignment
-            if self.drone.guideLine is not None and abs(self.drone.guideAngularError) > 0.01:
-                self.drone.turn(1.0*self.drone.guideAngularError)
+            if self.drone.goodGuide:
+                if abs(self.drone.guideAngularError) > 0.01:
+                    self.drone.turn(2.0*self.drone.guideAngularError)
+                if self.drone.guideDistance > 3:
+                    self.drone.forward()
+                else:
+                    self.drone.land()
             self.drone.process()
         
         self.kb.set_normal_term()

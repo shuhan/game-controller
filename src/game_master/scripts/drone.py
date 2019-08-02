@@ -32,7 +32,7 @@ class BebopDrone:
     FLIGHT_STATE_LANDING    = 4
     FLIGHT_STATE_UNKNOWN    = -1
 
-    def __init__(self, frame_callback=None, skip=5, frequency=100, movement_speed=0.3, turning_speed=0.5, annonymous=False):
+    def __init__(self, frame_callback=None, skip=1, frequency=100, movement_speed=0.3, turning_speed=0.5, annonymous=False):
         '''
         Rospy node must be initialized before instantiating BebopDrone
         '''
@@ -53,9 +53,9 @@ class BebopDrone:
         self.speedX             = 0
         self.speedY             = 0
         self.speedZ             = 0
-        self.guide_distance     = 0
         self.frame              = None
         self.guideLine          = None
+        self.goodGuide          = False
         self.guideDistance      = 0
         self.guideTheta         = 0
         self.guideAngularError  = 0
@@ -155,7 +155,8 @@ class BebopDrone:
                 seq = data.header.seq
                 # For now lets process every 5 frames
                 if self.frame_skip == 0 or seq % self.frame_skip == 0:
-                    self.frame_callback(self.frame)
+                    frameTime = float(data.header.stamp.secs + float(data.header.stamp.nsecs) / 1e9)
+                    self.frame_callback(self.frame, frameTime)
             cv2.imshow('Bebop', img)
             cv2.waitKey(1)
         except CvBridgeError as e:
@@ -175,6 +176,12 @@ class BebopDrone:
             self.takeoff_pub.publish()
         elif self.state == self.FLIGHT_STATE_HOVERING or self.state == self.FLIGHT_STATE_MANOEUVRING:
             self.land_pub.publish()
+
+    def takeoff(self):
+        self.takeoff_pub.publish()
+
+    def land(self):
+        self.land_pub.publish()
 
     #-----------------------------------------------------------------------
     # Piloting Control
@@ -281,6 +288,15 @@ class BebopDrone:
         self.cam_cmd.angular.z = self.camera_pan
         self.cam_control.publish(self.cam_cmd)
         return self
+
+    def cameraControl(self, tilt, pan):
+        self.camera_tilt = tilt
+        self.camera_pan  = pan
+        self.cam_cmd.angular.y = self.camera_tilt
+        self.cam_cmd.angular.z = self.camera_pan
+        self.cam_control.publish(self.cam_cmd)
+        return self
+
 
     #-----------------------------------------------------------------------
     # Process Control
