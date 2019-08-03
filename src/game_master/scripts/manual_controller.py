@@ -118,14 +118,16 @@ class ManualController:
                 self.navigate()
                 self.move_cam()
             self.print_status()
-            # Temporary auto alignment
+
+            # Temporary Auto Alignment
             if self.drone.goodGuide:
                 if abs(self.drone.guideAngularError) > 0.01:
-                    self.drone.turn(2.0*self.drone.guideAngularError)
+                    self.drone.turn(1.0*self.drone.guideAngularError)
                 if self.drone.guideDistance > 3:
                     self.drone.forward()
                 else:
                     self.drone.land()
+            # End Auto Alighment
             self.drone.process()
         
         self.kb.set_normal_term()
