@@ -171,7 +171,7 @@ class AutonomousController:
 
     def face_right_wall(self):
         if self.yawOrientate(self.targetWall):
-            '''self.drone.land()'''
+            self.drone.land()
 
     def run(self):
         self.print_help()
@@ -186,14 +186,14 @@ class AutonomousController:
                 self.move_cam()
             self.print_status()
 
-            # if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
-            #     if not self.directionFixed:
-            #         self.intial_orientate()
-            #     else:
-            #         if not self.inMiddle:
-            #             self.move_in_middle()
-            #         else:
-            #             self.face_right_wall()
+            if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
+                if not self.directionFixed:
+                    self.intial_orientate()
+                else:
+                    if not self.inMiddle:
+                        self.move_in_middle()
+                    else:
+                        self.face_right_wall()
             self.drone.process()
         
         self.kb.set_normal_term()
