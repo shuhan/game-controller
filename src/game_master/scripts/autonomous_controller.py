@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import rospy
+import numpy as np
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
@@ -30,7 +31,7 @@ KEY_CONFIGS = OrderedDict([
     ('-' , 'Speed Down')
 ])
 
-class ManualController:
+class AutonomousController:
 
     def __init__(self):
 
@@ -43,6 +44,13 @@ class ManualController:
         self.drone.frame_callback   = self.vision.calculateFrontalDistance
         self.rate                   = rospy.Rate(100)
         self.status_init            = True
+        self.directionFixed         = False
+        self.goodFound              = False
+        self.frontYaw               = 0
+        self.rightYaw               = 0
+        self.leftYaw                = 0
+        self.backYaw                = 0
+        self.targetWall             = 0
 
     def print_help(self):
         # Upcoming Controller
@@ -56,7 +64,7 @@ class ManualController:
             sys.stdout.write("\033[F") # Cursor up one line
         else:
             self.status_init = False
-        print("Speed {0} Altitude {1:.2f} Tilt {2} Pan {3} Battery {4}% Status {5}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.camera_pan, self.drone.battery, self.drone.getStateStr()))
+        print("Speed {0} Altitude {1:.2f} Tilt {2} Battery {3}% Status {4} Back Yaw {5:.2f}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.battery, self.drone.getStateStr(), self.backYaw))
 
     def adjust_speed(self):
         if self.char == '+':
@@ -71,19 +79,35 @@ class ManualController:
 
     def takeoff_landing(self):
         if self.char == ' ':
+            self.drone.cameraControl(0, 0)
+            self.directionFixed = False
+            self.goodFound  = False
+            self.inMiddle   = False
             self.drone.takeoffLanding()
             self.kb.clear()
     
     def navigate(self):
         
         if self.char == 'w':                # Forward
-            self.drone.forward()
+            if self.inMiddle:
+                self.targetWall     = self.rightYaw
+            else:
+                self.drone.forward()
         elif self.char == 's':              # Reverse
-            self.drone.reverse()
+            if self.inMiddle:
+                self.targetWall     = self.leftYaw
+            else:
+                self.drone.reverse()
         elif self.char == 'a':              # Left
-            self.drone.left()
+            if self.inMiddle:
+                self.targetWall     = self.frontYaw
+            else:
+                self.drone.left()
         elif self.char == 'd':              # Right
-            self.drone.right()
+            if self.inMiddle:
+                self.targetWall     = self.backYaw
+            else:
+                self.drone.right()
         elif self.char == 'q':              # YAW Left
             self.drone.yawLeft()
         elif self.char == 'e':              # YAW Right
@@ -105,6 +129,50 @@ class ManualController:
         if self.char == '6':
             self.drone.cameraPanRight()
 
+    def orientate(self):
+        if self.drone.goodGuide and abs(self.drone.guideAngularError) > 0.01:
+            self.drone.turn(1.0*self.drone.guideAngularError)
+            return False
+        else:
+            return True
+
+    def yawOrientate(self, targetYaw):
+        error = self.drone.yaw - targetYaw
+        if abs(error) > 0.05:
+            sign = error/abs(error)
+            turn = sign * min([0.5, abs(error)])
+            self.drone.turn(turn)
+            return False
+        else:
+            return True
+
+    def intial_orientate(self):
+        if not self.directionFixed and self.drone.state != self.drone.FLIGHT_STATE_NOT_FLYING:
+            self.directionFixed = self.orientate()
+            if self.directionFixed:
+                halfPi              = np.radians(90)
+                self.frontYaw       = self.drone.yaw
+                self.rightYaw       = self.frontYaw + halfPi
+                self.leftYaw        = self.frontYaw - halfPi
+                self.backYaw        = self.frontYaw + (2*halfPi)    #Consider the rotation of Pi
+                if(self.backYaw > 2*halfPi):
+                    self.backYaw    = self.frontYaw - (2*halfPi)
+                self.targetWall     = self.rightYaw
+                self.goodFound      = True
+        return self.directionFixed
+
+    def move_in_middle(self):
+        self.yawOrientate(self.frontYaw)
+        if self.drone.guideDistance > 3:
+            self.drone.forward()
+        else:
+            if self.goodFound:      # Now turn right
+                self.inMiddle   = True
+
+    def face_right_wall(self):
+        if self.yawOrientate(self.targetWall):
+            '''self.drone.land()'''
+
     def run(self):
         self.print_help()
 
@@ -117,13 +185,22 @@ class ManualController:
                 self.navigate()
                 self.move_cam()
             self.print_status()
+
+            # if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
+            #     if not self.directionFixed:
+            #         self.intial_orientate()
+            #     else:
+            #         if not self.inMiddle:
+            #             self.move_in_middle()
+            #         else:
+            #             self.face_right_wall()
             self.drone.process()
         
         self.kb.set_normal_term()
 
 if __name__ == "__main__":
     try:
-        dc = ManualController()
+        dc = AutonomousController()
         dc.run()
     except rospy.ROSInterruptException:
         pass
