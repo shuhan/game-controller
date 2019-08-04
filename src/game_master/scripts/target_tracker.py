@@ -2,6 +2,9 @@
 from drone import BebopDrone
 
 class Goal:
+    '''
+    Helps drone to achive distance, height and orientation goal
+    '''
 
     def __init__(self, drone):
         self.drone              = drone
@@ -57,3 +60,7 @@ class Goal:
         self.distanceTarget     = 0
         self.onDistance         = False
 
+    def process(self):
+        '''
+        This shall be called on every tick so that it can update the target
+        '''
