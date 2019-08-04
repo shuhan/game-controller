@@ -9,6 +9,7 @@ from keyboard import KBHit
 from collections import OrderedDict
 from drone import BebopDrone
 from vision import DroneVision
+from target_tracker import Goal
 
 ON_GROUND   = "On Ground "
 ON_AIR      = "On Air    "
@@ -40,6 +41,7 @@ class AutonomousController:
         self.char                   = ''
         self.kb                     = KBHit()
         self.drone                  = BebopDrone()
+        self.goal                   = Goal(self.drone)
         self.vision                 = DroneVision(self.drone)
         self.drone.frame_callback   = self.vision.calculateFrontalDistance
         self.rate                   = rospy.Rate(100)
@@ -51,6 +53,7 @@ class AutonomousController:
         self.leftYaw                = 0
         self.backYaw                = 0
         self.targetWall             = 0
+        self.autonomous             = False
 
     def print_help(self):
         # Upcoming Controller
@@ -85,6 +88,8 @@ class AutonomousController:
             self.inMiddle   = False
             self.drone.takeoffLanding()
             self.kb.clear()
+        elif self.char == 'x':
+            self.autonomous = not self.autonomous
     
     def navigate(self):
         
@@ -136,16 +141,6 @@ class AutonomousController:
         else:
             return True
 
-    def yawOrientate(self, targetYaw):
-        error = self.drone.yaw - targetYaw
-        if abs(error) > 0.05:
-            sign = error/abs(error)
-            turn = sign * min([0.5, abs(error)])
-            self.drone.turn(turn)
-            return False
-        else:
-            return True
-
     def intial_orientate(self):
         if not self.directionFixed and self.drone.state != self.drone.FLIGHT_STATE_NOT_FLYING:
             self.directionFixed = self.orientate()
@@ -159,19 +154,25 @@ class AutonomousController:
                     self.backYaw    = self.frontYaw - (2*halfPi)
                 self.targetWall     = self.rightYaw
                 self.goodFound      = True
+                self.goal.setOrientationTarget(self.frontYaw)
+                self.goal.setDistanceTarget(3, False, self.moved_in_middle)
         return self.directionFixed
 
-    def move_in_middle(self):
-        self.yawOrientate(self.frontYaw)
-        if self.drone.guideDistance > 3:
-            self.drone.forward()
-        else:
-            if self.goodFound:      # Now turn right
-                self.inMiddle   = True
+    def moved_in_middle(self):
+        # Now turn right
+        self.drone.cameraControl(-15, 0)
+        self.goal.setOrientationTarget(self.rightYaw, True, self.turned_on_right)
+        self.inMiddle   = True
 
-    def face_right_wall(self):
-        if self.yawOrientate(self.targetWall):
-            self.drone.land()
+    def turned_on_right(self):
+        self.vision.expectedDistance = self.drone.guideDistance
+        self.goal.setDistanceTarget(3, False, self.close_to_right)
+
+    def close_to_right(self):
+        self.goal.setHeightTarget(1.5, True, self.up_high)
+
+    def up_high(self):
+        self.goal.setHeightTarget(0.6, False, self.drone.land)
 
     def run(self):
         self.print_help()
@@ -186,15 +187,17 @@ class AutonomousController:
                 self.move_cam()
             self.print_status()
 
-            if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
-                if not self.directionFixed:
-                    self.intial_orientate()
-                else:
-                    if not self.inMiddle:
-                        self.move_in_middle()
+            # Drone autonomy
+            if self.autonomous:
+                if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
+                    if not self.directionFixed:
+                        self.intial_orientate()
                     else:
-                        self.face_right_wall()
+                        ''' '''    
+                self.goal.process()
+    
             self.drone.process()
+            # End of Autonomy
         
         self.kb.set_normal_term()
 

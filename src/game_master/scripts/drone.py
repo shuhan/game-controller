@@ -32,7 +32,7 @@ class BebopDrone:
     FLIGHT_STATE_LANDING    = 4
     FLIGHT_STATE_UNKNOWN    = -1
 
-    def __init__(self, frame_callback=None, skip=5, frequency=100, movement_speed=0.1, turning_speed=0.2, annonymous=False):
+    def __init__(self, frame_callback=None, skip=4, frequency=100, movement_speed=0.1, turning_speed=0.2, annonymous=False):
         '''
         Rospy node must be initialized before instantiating BebopDrone
         '''
@@ -201,6 +201,13 @@ class BebopDrone:
         self.navi_cmd.linear.x = -1 * self.movement_speed
         return self
 
+    def moveX(self, speed):
+        '''
+        Move the drone forward or reverse with set speed
+        '''
+        self.navi_cmd.linear.x = speed
+        return self
+
     def left(self):
         '''
         Fly it on the left
@@ -243,6 +250,13 @@ class BebopDrone:
         Make the drone descend
         '''
         self.navi_cmd.linear.z = -1 * self.movement_speed
+        return self
+
+    def moveZ(self, speed):
+        '''
+        Move the drone up or down with set speed
+        '''
+        self.navi_cmd.linear.z = speed
         return self
 
     #-----------------------------------------------------------------------
