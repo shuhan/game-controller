@@ -9,7 +9,7 @@ from keyboard import KBHit
 from collections import OrderedDict
 from drone import BebopDrone
 from vision import DroneVision
-from target_tracker import Goal
+from target_tracker import GoalTracker
 
 ON_GROUND   = "On Ground "
 ON_AIR      = "On Air    "
@@ -41,7 +41,7 @@ class AutonomousController:
         self.char                   = ''
         self.kb                     = KBHit()
         self.drone                  = BebopDrone()
-        self.goal                   = Goal(self.drone)
+        self.goalTracker            = GoalTracker(self.drone)
         self.vision                 = DroneVision(self.drone)
         self.drone.frame_callback   = self.vision.calculateFrontalDistance
         self.rate                   = rospy.Rate(100)
@@ -123,8 +123,6 @@ class AutonomousController:
             self.drone.descend()
 
     def move_cam(self):
-        # 0, -25, -48, -70
-        # Don't want contenious changes
         if self.char == '8':
             self.drone.cameraTiltUp()
         if self.char == '2':
@@ -154,25 +152,28 @@ class AutonomousController:
                     self.backYaw    = self.frontYaw - (2*halfPi)
                 self.targetWall     = self.rightYaw
                 self.goodFound      = True
-                self.goal.setOrientationTarget(self.frontYaw)
-                self.goal.setDistanceTarget(3, False, self.moved_in_middle)
+                self.goalTracker.setOrientationTarget(self.frontYaw)
+                self.goalTracker.setDistanceTarget(3, False, self.moved_in_middle)
         return self.directionFixed
 
     def moved_in_middle(self):
         # Now turn right
         self.drone.cameraControl(-15, 0)
-        self.goal.setOrientationTarget(self.rightYaw, True, self.turned_on_right)
+        self.goalTracker.setOrientationTarget(self.rightYaw, True, self.turned_on_right)
         self.inMiddle   = True
 
     def turned_on_right(self):
         self.vision.expectedDistance = self.drone.guideDistance
-        self.goal.setDistanceTarget(3, False, self.close_to_right)
+        self.goalTracker.setDistanceTarget(3, False, self.go_up_high)
 
-    def close_to_right(self):
-        self.goal.setHeightTarget(1.5, True, self.up_high)
+    def go_up_high(self):
+        self.goalTracker.setHeightTarget(1.5, True, self.swipe_the_ground)
 
-    def up_high(self):
-        self.goal.setHeightTarget(0.6, False, self.drone.land)
+    def swipe_the_ground(self):
+        self.goalTracker.setSwipeTarget(self.prepare_to_land)
+
+    def prepare_to_land(self):
+        self.goalTracker.setHeightTarget(0.6, False, self.drone.land)
 
     def run(self):
         self.print_help()
@@ -194,7 +195,7 @@ class AutonomousController:
                         self.intial_orientate()
                     else:
                         ''' '''    
-                self.goal.process()
+                self.goalTracker.process()
     
             self.drone.process()
             # End of Autonomy

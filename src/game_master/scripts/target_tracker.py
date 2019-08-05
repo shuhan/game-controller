@@ -1,7 +1,7 @@
 
 from drone import BebopDrone
 
-class Goal:
+class GoalTracker:
     '''
     Helps drone to achive distance, height and orientation goal
     '''
@@ -11,6 +11,11 @@ class Goal:
         self.reset()
 
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
+        '''
+        Adjust hight of the drone, go up or down.
+        Hodling the height may interfere with swipe and land.
+        Landing and Swipe shall not be combined with hold height.
+        '''
         self.enableHeight       = True
         self.holdHeight         = hold
         self.heightAchived      = False
@@ -25,6 +30,7 @@ class Goal:
         self.heightCallback     = None
         
     def setOrientationTarget(self, targetOrientation, hold=True, callback=None):
+        self.resetSwipeTarget()
         self.enableOrientation  = True
         self.holdOrientation    = hold
         self.orientationAchived = False
@@ -52,10 +58,26 @@ class Goal:
         self.distanceAchived    = False
         self.distanceCallback   = None
 
+    def setSwipeTarget(self, callback=None):
+        self.resetOrientationTarget()
+        self.enableSwipe        = True
+        self.swipeStarted       = False
+        self.doneSwipe          = False
+        self.swipeTarget        = self.drone.yaw
+        self.swipeCallback      = callback
+
+    def resetSwipeTarget(self):
+        self.enableSwipe        = False
+        self.swipeStarted       = False
+        self.doneSwipe          = False
+        self.swipeTarget        = 0
+        self.swipeCallback      = None
+
     def reset(self):
         self.resetHeightTarget()
         self.resetOrientationTarget()
         self.resetDistanceTarget()
+        self.resetSwipeTarget()
 
     def adjustHeight(self):
         '''
@@ -108,6 +130,30 @@ class Goal:
             
         return self.distanceAchived
 
+    def adjustSwipe(self):
+        '''
+        Adjust drone swipe
+        '''
+        error = self.drone.yaw - self.swipeTarget
+        turn = -0.5
+        if self.swipeStarted:
+            if abs(error) > 0.2:
+                self.drone.turn(turn)
+            else:
+                if not self.doneSwipe:
+                    self.doneSwipe = True
+                    if self.swipeCallback is not None:
+                        self.swipeCallback()
+        else:
+            # Start swiping and move away from orientation
+            # Then set swipe started to True so that it doesn't assume convergence immediately
+            if abs(error) > 0.5:
+                self.swipeStarted = True
+            
+            self.drone.turn(turn)
+            
+        return self.doneSwipe
+
     def process(self):
         '''
         This shall be called on every tick so that it can update the target
@@ -120,3 +166,6 @@ class Goal:
 
         if self.enableDistance and (self.holdDistance or not self.distanceAchived):
             self.adjustDistance()
+
+        if self.enableSwipe and not self.doneSwipe:
+            self.adjustSwipe()
