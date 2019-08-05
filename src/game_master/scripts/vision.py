@@ -37,10 +37,10 @@ class DroneVision:
             distance                        = self.drone.altitude * np.tan(angle)
             averageDistance                 = np.average(distance)
             self.drone.guideLine            = guideLine
-            self.drone.guideDistance        = averageDistance
             self.drone.guideTheta           = guideTheta
             self.drone.guideAngularError    = np.radians(90) - guideTheta
             self.drone.goodGuide            = averageDistance >= self.expectedDistance - 0.5 and averageDistance <= self.expectedDistance + 0.5
+            self.drone.setDistance(averageDistance)
 
             # Evaluate if guide is good
             # A good guide gives rough estimation with 20 cm error
@@ -55,8 +55,6 @@ class DroneVision:
                 line_color = (0, 255, 0)
                 if not self.drone.goodGuide:
                     line_color = (0, 0, 255)
-                    # Delibarately force it to ignore the line
-                    self.guideLine = None
                 else:
                     if averageDistance < self.expectedDistance:
                         self.expectedDistance = averageDistance

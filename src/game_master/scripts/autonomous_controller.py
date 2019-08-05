@@ -10,6 +10,7 @@ from collections import OrderedDict
 from drone import BebopDrone
 from vision import DroneVision
 from target_tracker import GoalTracker
+from measurement import VisualMeasurement
 
 ON_GROUND   = "On Ground "
 ON_AIR      = "On Air    "
@@ -43,6 +44,7 @@ class AutonomousController:
         self.drone                  = BebopDrone()
         self.goalTracker            = GoalTracker(self.drone)
         self.vision                 = DroneVision(self.drone)
+        self.visualScale            = VisualMeasurement(self.goalTracker)
         self.drone.frame_callback   = self.vision.calculateFrontalDistance
         self.rate                   = rospy.Rate(100)
         self.status_init            = True
@@ -143,23 +145,16 @@ class AutonomousController:
         if not self.directionFixed and self.drone.state != self.drone.FLIGHT_STATE_NOT_FLYING:
             self.directionFixed = self.orientate()
             if self.directionFixed:
-                halfPi              = np.radians(90)
-                self.frontYaw       = self.drone.yaw
-                self.rightYaw       = self.frontYaw + halfPi
-                self.leftYaw        = self.frontYaw - halfPi
-                self.backYaw        = self.frontYaw + (2*halfPi)    #Consider the rotation of Pi
-                if(self.backYaw > 2*halfPi):
-                    self.backYaw    = self.frontYaw - (2*halfPi)
-                self.targetWall     = self.rightYaw
+                self.visualScale.setNorth(self.drone.yaw)
                 self.goodFound      = True
-                self.goalTracker.setOrientationTarget(self.frontYaw)
+                self.goalTracker.setOrientationTarget(self.visualScale.northWall)
                 self.goalTracker.setDistanceTarget(3, False, self.moved_in_middle)
         return self.directionFixed
 
     def moved_in_middle(self):
         # Now turn right
         self.drone.cameraControl(-15, 0)
-        self.goalTracker.setOrientationTarget(self.rightYaw, True, self.turned_on_right)
+        self.goalTracker.setOrientationTarget(self.visualScale.eastWall, True, self.turned_on_right)
         self.inMiddle   = True
 
     def turned_on_right(self):
@@ -173,7 +168,14 @@ class AutonomousController:
         self.goalTracker.setSwipeTarget(self.prepare_to_land)
 
     def prepare_to_land(self):
-        self.goalTracker.setHeightTarget(0.6, False, self.drone.land)
+        self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
+
+    def measure_distance(self):
+        self.visualScale.getSelfLocation(self.get_location)
+
+    def get_location(self, x, y):
+        print("Location is: {0:.2f}, {1:.2f}\n\n\r".format(x, y))
+        self.drone.land()
 
     def run(self):
         self.print_help()

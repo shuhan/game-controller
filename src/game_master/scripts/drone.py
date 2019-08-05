@@ -59,6 +59,7 @@ class BebopDrone:
         self.guideDistance      = 0
         self.guideTheta         = 0
         self.guideAngularError  = 0
+        self.distanceChanged    = None
 
         # Publishers
         self.takeoff_pub    = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
@@ -161,6 +162,13 @@ class BebopDrone:
             cv2.waitKey(1)
         except CvBridgeError as e:
             print(e)
+
+    def setDistance(self, disatnce):
+        
+        if callable(self.distanceChanged):
+            self.distanceChanged(disatnce, self.guideDistance)  #Ignore the not-callable error, we won't call if it's not callable
+        
+        self.guideDistance = disatnce
 
     #-----------------------------------------------------------------------
     # Control the drone
