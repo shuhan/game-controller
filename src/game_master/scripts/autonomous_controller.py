@@ -162,16 +162,16 @@ class AutonomousController:
         self.goalTracker.setDistanceTarget(3, False, self.go_up_high)
 
     def go_up_high(self):
-        self.goalTracker.setHeightTarget(1.5, True, self.swipe_the_ground)
+        self.goalTracker.setHeightTarget(1.5, True, self.prepare_to_land)
 
-    def swipe_the_ground(self):
-        self.goalTracker.setSwipeTarget(self.prepare_to_land)
+    # def swipe_the_ground(self):
+    #     self.goalTracker.setSwipeTarget(self.prepare_to_land)
 
     def prepare_to_land(self):
         self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
 
     def measure_distance(self):
-        self.visualScale.getSelfLocation(self.get_location)
+        self.visualScale.getFastLocation(self.get_location)
 
     def get_location(self, x, y):
         print("Location is: {0:.2f}, {1:.2f}\n\n\r".format(x, y))

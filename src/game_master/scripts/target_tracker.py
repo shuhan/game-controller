@@ -1,4 +1,5 @@
 
+import numpy as np
 from drone import BebopDrone
 
 class GoalTracker:
@@ -7,8 +8,9 @@ class GoalTracker:
     '''
 
     def __init__(self, drone):
-        self.drone              = drone
+        self.drone      = drone
         self.reset()
+        self.pi         = np.radians(180)
 
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
         '''
@@ -79,6 +81,13 @@ class GoalTracker:
         self.resetDistanceTarget()
         self.resetSwipeTarget()
 
+    def getAngularError(self, currentOrientation, targetOrientation):
+        error = self.drone.yaw - self.orientationTarget
+        if abs(error) > self.pi:
+            sign = error/abs(error)
+            error = -1 * sign * (2*self.pi - abs(error))
+        return error
+
     def adjustHeight(self):
         '''
         Adjust drone height
@@ -100,7 +109,7 @@ class GoalTracker:
         '''
         Adjust drone orientation
         '''
-        error = self.drone.yaw - self.orientationTarget
+        error = self.getAngularError(self.drone.yaw, self.orientationTarget)
         if abs(error) > 0.05:
             sign = error/abs(error)
             turn = sign * min([0.5, abs(error)])

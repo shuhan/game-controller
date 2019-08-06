@@ -32,7 +32,7 @@ class BebopDrone:
     FLIGHT_STATE_LANDING    = 4
     FLIGHT_STATE_UNKNOWN    = -1
 
-    def __init__(self, frame_callback=None, skip=4, frequency=100, movement_speed=0.1, turning_speed=0.2, annonymous=False):
+    def __init__(self, frame_callback=None, skip=5, frequency=100, movement_speed=0.1, turning_speed=0.2, annonymous=False):
         '''
         Rospy node must be initialized before instantiating BebopDrone
         '''
