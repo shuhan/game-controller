@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import math
 from cv_bridge import CvBridge, CvBridgeError
+from object_detector import Detector
 
 class DroneVision:
 
@@ -18,12 +19,17 @@ class DroneVision:
         self.vertical_fov       = vfov
         self.horizontal_fov     = hfov
         self.expectedDistance   = expectedDistance
+        self.detector           = Detector(drone, vfov, hfov)
         self.frameTime          = 0
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
+        # Navigate
         height, _, _                        = origImg.shape
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, False)
         
+        # Find MR York
+        self.detector.findMrYork(origImg, frameTime, Display)
+
         # Always update the guide line here
         self.drone.guideLine                = guideLine
 
