@@ -23,9 +23,10 @@ class DroneVision:
         self.frameTime          = 0
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
+
         # Navigate
         height, _, _                        = origImg.shape
-        guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, False)
+        guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
         
         # Find MR York
         self.detector.findMrYork(origImg, frameTime, Display)
