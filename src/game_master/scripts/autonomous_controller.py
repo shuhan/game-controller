@@ -198,7 +198,11 @@ class AutonomousController:
                     else:
                         ''' '''    
                 self.goalTracker.process()
-    
+
+                if self.drone.bearFound:
+                    print("Bear found\n\n")
+                    self.autonomous = False
+
             self.drone.process()
             # End of Autonomy
         

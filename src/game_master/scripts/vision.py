@@ -24,15 +24,16 @@ class DroneVision:
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
 
+        # Find MR York
+        bear_found, bounding_box = self.detector.findMrYork(origImg, frameTime, Display)
+
         # Navigate
         height, _, _                        = origImg.shape
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
-        
-        # Find MR York
-        self.detector.findMrYork(origImg, frameTime, Display)
 
         # Always update the guide line here
         self.drone.guideLine                = guideLine
+        self.drone.bearFound                = bear_found
 
         if guideLine is not None:
             # Calculate distance to front guide
