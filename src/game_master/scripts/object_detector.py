@@ -41,7 +41,7 @@ class Detector:
 
 
     def findTheVehicle(self, Display=True):
-        threash = 200
+        threash = 90
 
         vehicle_mask = cv2.inRange(self.hsvImage, np.array([0, 100, 85]), np.array([10, 255, 125])) & self.expectedFloorMask
 
@@ -51,7 +51,7 @@ class Detector:
 
         vehicle_region = cv2.dilate(vehicle_mask, kernel, iterations=2)
 
-        vehicle_found = np.sum(vehicle_mask) > threash
+        vehicle_found = np.sum(vehicle_mask)/255 > threash
 
         vehicle_bounding_box = None
 
@@ -90,7 +90,7 @@ class Detector:
         _, tshirt_mask = cv2.threshold(cv2.blur(tshirt_mask, (5,5)), 127, 255, cv2.THRESH_BINARY)
         tshirt_region = cv2.dilate(tshirt_mask, kernel, iterations=2)
 
-        bear_found = np.sum(np.bitwise_and(bear_mask, tshirt_region)) > threash
+        bear_found = np.sum((bear_mask & tshirt_region))/255 > threash
 
         bear_bounding_box = None
 
@@ -108,7 +108,7 @@ class Detector:
 
         if Display:
             if bear_found and bear_bounding_box is not None:
-                cv2.rectangle(self.origImg, (bear_bounding_box[0], bear_bounding_box[1]), (bear_bounding_box[2], bear_bounding_box[3]), (255, 0, 0), 2)
+                cv2.rectangle(self.origImg, (bear_bounding_box[0], bear_bounding_box[1]), (bear_bounding_box[2], bear_bounding_box[3]), (255, 255, 0), 2)
             cv2.imshow("Bear Found", self.origImg)
             cv2.imshow("Floor Mask", self.expectedFloorMask)
 

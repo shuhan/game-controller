@@ -8,6 +8,7 @@ import rospy
 from sensor_msgs.msg import Image
 import cv2
 import numpy as np
+from scipy.spatial import distance as ED
 import math
 from cv_bridge import CvBridge, CvBridgeError
 from object_detector import Detector
@@ -29,14 +30,20 @@ class DroneVision:
         bear_found, bear_bounding_box = self.detector.findMrYork(Display)
         vehicle_found, vehicle_bounding_box = self.detector.findTheVehicle(Display)
 
+        site_found = False
+
+        if bear_bounding_box is not None and vehicle_bounding_box is not None:
+            distance    = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
+            site_found  = bear_found and vehicle_found and distance < 200
+
         # Navigate
         height, _, _                        = origImg.shape
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
 
         # Always update the guide line here
         self.drone.guideLine                = guideLine
-        self.drone.bearFound                = bear_found
-        self.drone.vehicleFound             = vehicle_found
+        self.drone.bearFound                = site_found
+        self.drone.vehicleFound             = site_found
 
         if guideLine is not None:
             # Calculate distance to front guide
