@@ -199,8 +199,8 @@ class AutonomousController:
                         ''' '''    
                 self.goalTracker.process()
 
-                if self.drone.bearFound:
-                    print("Bear found\n\n")
+                if self.drone.vehicleFound:
+                    print("Vehicle found\n\n")
                     self.autonomous = False
 
             self.drone.process()

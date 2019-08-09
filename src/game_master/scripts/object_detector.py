@@ -14,27 +14,10 @@ class Detector:
         self.hsvImage           = None
         self.expectedFloorMask  = None
 
-    def getKMeanImage(self, origImg, K):
-        img = cv2.cvtColor(origImg, cv2.COLOR_BGR2HSV)
-
-        Z = img.reshape((-1,3))
-
-        # convert to np.float32
-        Z = np.float32(Z)
-
-        # define criteria, number of clusters(K) and apply kmeans()
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 3, 1.0)
-        _,label,center=cv2.kmeans(Z,K,None,criteria, 2,cv2.KMEANS_PP_CENTERS)
-
-        # Now convert back into uint8, and make original image
-        center = np.uint8(center)
-        res = center[label.flatten()]
-        res2 = res.reshape((img.shape))
-
-        return cv2.cvtColor(res2, cv2.COLOR_HSV2BGR), label, center
-
-    def findMrYork(self, origImg, frameTime, Display=True):
-        self.hsvImage    = cv2.cvtColor(origImg, cv2.COLOR_BGR2HSV)
+    def setImage(self, origImg, frameTime):
+        self.origImg    = origImg
+        self.hsvImage   = cv2.cvtColor(origImg, cv2.COLOR_BGR2HSV)
+        self.frameTime  = frameTime
 
         floor_mask  = cv2.inRange(self.hsvImage, np.array([0, 0, 120]), np.array([100, 90, 210]))
 
@@ -54,9 +37,48 @@ class Detector:
             else:
                 self.expectedFloorMask[i, :] = np.ones((1, width), normalized_mask.dtype)
 
-        threash = 90
+        self.expectedFloorMask = self.expectedFloorMask * 255
 
-        self.expectedFloorMask *= 255
+
+    def findTheVehicle(self, Display=True):
+        threash = 200
+
+        vehicle_mask = cv2.inRange(self.hsvImage, np.array([0, 100, 85]), np.array([10, 255, 125])) & self.expectedFloorMask
+
+        _, vehicle_mask = cv2.threshold(cv2.blur(vehicle_mask, (5,5)), 127, 255, cv2.THRESH_BINARY)
+
+        kernel = np.ones((8,8),np.uint8)
+
+        vehicle_region = cv2.dilate(vehicle_mask, kernel, iterations=2)
+
+        vehicle_found = np.sum(vehicle_mask) > threash
+
+        vehicle_bounding_box = None
+
+        if vehicle_found:
+            _, contours, _ = cv2.findContours(vehicle_region, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            
+            for contour in contours:
+                contour = cv2.convexHull(contour)
+                x,y,w,h = cv2.boundingRect(contour)
+                area = cv2.contourArea(contour)
+                wh_ratio = float(w)/float(h)
+                
+                if area > threash and area > 0.6 * w * h and wh_ratio > 0.7 and wh_ratio < 1.40 and np.sum(self.expectedFloorMask[y:y+h, x:x+w]) > (5*area)/6:
+                    vehicle_bounding_box = (x, y, x + w, y + h)
+
+        if Display:
+            if vehicle_found and vehicle_bounding_box is not None:
+                cv2.rectangle(self.origImg, (vehicle_bounding_box[0], vehicle_bounding_box[1]), (vehicle_bounding_box[2], vehicle_bounding_box[3]), (255, 0, 0), 2)
+            cv2.imshow("Vehicle Found", self.origImg)
+            cv2.imshow("Vehicle Mask", vehicle_mask)
+
+        return vehicle_found and vehicle_bounding_box is not None, vehicle_bounding_box
+            
+
+    def findMrYork(self, Display=True):
+
+        threash = 90
 
         bear_mask   = cv2.inRange(self.hsvImage, np.array([16, 64, 60]), np.array([30, 150, 130])) & self.expectedFloorMask
         tshirt_mask = cv2.inRange(self.hsvImage, np.array([40, 40, 32]), np.array([75, 113, 66])) & self.expectedFloorMask
@@ -81,13 +103,13 @@ class Detector:
                 area = cv2.contourArea(contour)
                 wh_ratio = float(w)/float(h)
                 
-                if area > threash and area > 0.6 * w * h and wh_ratio > 0.7 and wh_ratio < 1.40 and np.sum(bear_mask[y:y+h, x:x+w])/255 > threash and np.sum(self.expectedFloorMask[y:y+h, x:x+w])/255 > (2*area)/3:
+                if area > threash and area > 0.6 * w * h and wh_ratio > 0.7 and wh_ratio < 1.40 and np.sum(bear_mask[y:y+h, x:x+w])/255 > threash and np.sum(self.expectedFloorMask[y:y+h, x:x+w])/255 > (5*area)/6:
                     bear_bounding_box = (x, y, x + w, y + h)
 
         if Display:
             if bear_found and bear_bounding_box is not None:
-                cv2.rectangle(origImg, (bear_bounding_box[0], bear_bounding_box[1]), (bear_bounding_box[2], bear_bounding_box[3]), (255, 0, 0), 2)
-            cv2.imshow("Bear Found", origImg)
+                cv2.rectangle(self.origImg, (bear_bounding_box[0], bear_bounding_box[1]), (bear_bounding_box[2], bear_bounding_box[3]), (255, 0, 0), 2)
+            cv2.imshow("Bear Found", self.origImg)
             cv2.imshow("Floor Mask", self.expectedFloorMask)
 
         return bear_found and bear_bounding_box is not None, bear_bounding_box

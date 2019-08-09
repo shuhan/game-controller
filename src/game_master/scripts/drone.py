@@ -61,6 +61,7 @@ class BebopDrone:
         self.guideAngularError  = 0
         self.distanceChanged    = None
         self.bearFound          = False
+        self.vehicleFound       = False
 
         # Publishers
         self.takeoff_pub    = rospy.Publisher('/bebop/takeoff', Empty, queue_size=1)
