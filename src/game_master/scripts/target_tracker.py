@@ -112,7 +112,7 @@ class GoalTracker:
         error = self.getAngularError(self.drone.yaw, self.orientationTarget)
         if abs(error) > 0.05:
             sign = error/abs(error)
-            turn = sign * min([0.5, abs(error)])
+            turn = sign * min([0.1, abs(error)])
             self.drone.turn(turn)
         else:
             if not self.orientationAchived:
@@ -144,7 +144,7 @@ class GoalTracker:
         Adjust drone swipe
         '''
         error = self.drone.yaw - self.swipeTarget
-        turn = -0.5
+        turn = -0.1
         if self.swipeStarted:
             if abs(error) > 0.2:
                 self.drone.turn(turn)

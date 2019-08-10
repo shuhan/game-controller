@@ -25,16 +25,24 @@ class DroneVision:
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
 
+        height, width, _ = origImg.shape
+
         self.detector.setImage(origImg, frameTime)
         # Find MR York
         bear_found, bear_bounding_box = self.detector.findMrYork(Display)
         vehicle_found, vehicle_bounding_box = self.detector.findTheVehicle(Display)
 
         site_found = False
+        accident_site_angle = None
 
         if bear_bounding_box is not None and vehicle_bounding_box is not None:
-            distance    = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
-            site_found  = bear_found and vehicle_found and distance < 200
+            distance        = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
+            bear_size       = abs(bear_bounding_box[0] - bear_bounding_box[2]) * abs(bear_bounding_box[1] - bear_bounding_box[3])
+            vehicle_size    = abs(vehicle_bounding_box[0] - vehicle_bounding_box[2]) * abs(vehicle_bounding_box[1] - vehicle_bounding_box[3])
+            site_found      = bear_found and vehicle_found and distance < 200 and bear_size < vehicle_size
+            accident_site_position  = (bear_bounding_box[0] + bear_bounding_box[2])/2
+            accident_site_degree    = (float((width/2) - accident_site_position)/float(width/2)) * (float(self.horizontal_fov)/2)
+            accident_site_angle     = self.drone.yaw - np.radians(accident_site_degree)
 
         # Navigate
         height, _, _                        = origImg.shape
@@ -44,6 +52,8 @@ class DroneVision:
         self.drone.guideLine                = guideLine
         self.drone.bearFound                = site_found
         self.drone.vehicleFound             = site_found
+        self.drone.siteAngle                = accident_site_angle
+        
 
         if guideLine is not None:
             # Calculate distance to front guide

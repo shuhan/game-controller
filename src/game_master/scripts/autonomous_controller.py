@@ -190,6 +190,8 @@ class AutonomousController:
                 self.move_cam()
             self.print_status()
 
+            site_found = False
+
             # Drone autonomy
             if self.autonomous:
                 if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
@@ -199,9 +201,9 @@ class AutonomousController:
                         ''' '''    
                 self.goalTracker.process()
 
-                if self.drone.vehicleFound:
-                    print("Accident Site found\n\n")
-                    self.autonomous = False
+                if self.drone.vehicleFound and self.drone.siteAngle is not None and not site_found:
+                    self.goalTracker.reset()
+                    self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.drone.land)
 
             self.drone.process()
             # End of Autonomy
