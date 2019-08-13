@@ -27,10 +27,19 @@ class DroneVision:
 
         height, width, _ = origImg.shape
 
+        bear_found, bear_bounding_box       = (False, None)
+        vehicle_found, vehicle_bounding_box = (False, None)
+
         self.detector.setImage(origImg, frameTime)
         # Find MR York
-        bear_found, bear_bounding_box = self.detector.findMrYork(Display)
-        vehicle_found, vehicle_bounding_box = self.detector.findTheVehicle(Display)
+        # bear_found, bear_bounding_box = self.detector.findMrYork(Display)
+        # vehicle_found, vehicle_bounding_box = self.detector.findTheVehicle(Display)
+
+        markers = self.detector.getMarkers()
+
+        # if len(markers) > 0:
+        #     print(markers[0])
+        #     print("\n\n")
 
         site_found = False
         accident_site_angle = None

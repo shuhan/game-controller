@@ -4,6 +4,7 @@ Contains the MR. York and His vehicle detector
 
 import cv2
 import numpy as np
+# from ar_markers.detect import detect_markers
 
 class Detector:
 
@@ -17,6 +18,7 @@ class Detector:
     def setImage(self, origImg, frameTime):
         self.origImg    = origImg
         self.hsvImage   = cv2.cvtColor(origImg, cv2.COLOR_BGR2HSV)
+        self.gray       = self.hsvImage[:,:,2]
         self.frameTime  = frameTime
 
         floor_mask  = cv2.inRange(self.hsvImage, np.array([0, 0, 120]), np.array([100, 90, 210]))
@@ -39,6 +41,31 @@ class Detector:
 
         self.expectedFloorMask = self.expectedFloorMask * 255
 
+    def getMarkers(self, Display=True):
+
+        aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
+
+        parameters =  cv2.aruco.DetectorParameters_create()
+
+        corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(self.gray, aruco_dict, parameters=parameters)
+        
+        if ids is not None:
+            print(ids)
+            print("\n\n")
+    
+        #It's working.
+        # my problem was that the cellphone put black all around it. The alrogithm
+        # depends very much upon finding rectangular black blobs
+    
+        cv2.aruco.drawDetectedMarkers(self.origImg, corners)
+
+        # markers = detect_markers(self.origImg)
+
+        # if Display:
+        #     for marker in markers:
+        #         marker.highlite_marker(self.origImg)
+        
+        return ids
 
     def findTheVehicle(self, Display=True):
         threash = 90
