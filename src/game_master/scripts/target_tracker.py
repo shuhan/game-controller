@@ -31,13 +31,14 @@ class GoalTracker:
         self.heightAchived      = False
         self.heightCallback     = None
         
-    def setOrientationTarget(self, targetOrientation, hold=True, callback=None):
+    def setOrientationTarget(self, targetOrientation, hold=True, callback=None, max_speed=0.1):
         self.resetSwipeTarget()
         self.enableOrientation  = True
         self.holdOrientation    = hold
         self.orientationAchived = False
         self.orientationTarget  = targetOrientation
         self.orientationCallback= callback
+        self.orientationMaxSpeed=max_speed
 
     def resetOrientationTarget(self):
         self.enableOrientation  = False
@@ -45,6 +46,7 @@ class GoalTracker:
         self.orientationTarget  = 0
         self.orientationAchived = False
         self.orientationCallback= None
+        self.orientationMaxSpeed=0.1
 
     def setDistanceTarget(self, targetDistance, hold=True, callback=None):
         self.enableDistance     = True
@@ -112,7 +114,7 @@ class GoalTracker:
         error = self.getAngularError(self.drone.yaw, self.orientationTarget)
         if abs(error) > 0.05:
             sign = error/abs(error)
-            turn = sign * min([0.1, abs(error)])
+            turn = sign * min([self.orientationMaxSpeed, abs(error)])
             self.drone.turn(turn)
         else:
             if not self.orientationAchived:

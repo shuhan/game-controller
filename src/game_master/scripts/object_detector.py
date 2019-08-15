@@ -48,24 +48,11 @@ class Detector:
         parameters =  cv2.aruco.DetectorParameters_create()
 
         corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(self.gray, aruco_dict, parameters=parameters)
+            
+        if Display:
+            cv2.aruco.drawDetectedMarkers(self.origImg, corners, ids)
         
-        if ids is not None:
-            print(ids)
-            print("\n\n")
-    
-        #It's working.
-        # my problem was that the cellphone put black all around it. The alrogithm
-        # depends very much upon finding rectangular black blobs
-    
-        cv2.aruco.drawDetectedMarkers(self.origImg, corners)
-
-        # markers = detect_markers(self.origImg)
-
-        # if Display:
-        #     for marker in markers:
-        #         marker.highlite_marker(self.origImg)
-        
-        return ids
+        return corners, ids
 
     def findTheVehicle(self, Display=True):
         threash = 90

@@ -26,6 +26,8 @@ class DroneVision:
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
 
         height, width, _ = origImg.shape
+        theta            = self.drone.camera_tilt
+        zeta             = np.degrees(self.drone.pitch)
 
         bear_found, bear_bounding_box       = (False, None)
         vehicle_found, vehicle_bounding_box = (False, None)
@@ -35,7 +37,18 @@ class DroneVision:
         # bear_found, bear_bounding_box = self.detector.findMrYork(Display)
         # vehicle_found, vehicle_bounding_box = self.detector.findTheVehicle(Display)
 
-        markers = self.detector.getMarkers()
+        corners, ids = self.detector.getMarkers()
+
+        if ids is not None:
+            for i in range(len(ids)):
+                if ids[i][0] == 10:
+                    vehicle_found   = True
+                    bear_found      = True
+                    bear_bounding_box = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 20, corners[i][0][0][1] + 20]
+                    vehicle_bounding_box = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 40, corners[i][0][0][1] + 40]
+                    # print(bear_bounding_box)
+                    # print("\n\n")
+
 
         # if len(markers) > 0:
         #     print(markers[0])
@@ -45,16 +58,22 @@ class DroneVision:
         accident_site_angle = None
 
         if bear_bounding_box is not None and vehicle_bounding_box is not None:
-            distance        = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
-            bear_size       = abs(bear_bounding_box[0] - bear_bounding_box[2]) * abs(bear_bounding_box[1] - bear_bounding_box[3])
-            vehicle_size    = abs(vehicle_bounding_box[0] - vehicle_bounding_box[2]) * abs(vehicle_bounding_box[1] - vehicle_bounding_box[3])
-            site_found      = bear_found and vehicle_found and distance < 200 and bear_size < vehicle_size
+            #distance        = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
+            #bear_size       = abs(bear_bounding_box[0] - bear_bounding_box[2]) * abs(bear_bounding_box[1] - bear_bounding_box[3])
+            #vehicle_size    = abs(vehicle_bounding_box[0] - vehicle_bounding_box[2]) * abs(vehicle_bounding_box[1] - vehicle_bounding_box[3])
+            site_found      = bear_found and vehicle_found# and distance < 200 and bear_size < vehicle_size
             accident_site_position  = (bear_bounding_box[0] + bear_bounding_box[2])/2
             accident_site_degree    = (float((width/2) - accident_site_position)/float(width/2)) * (float(self.horizontal_fov)/2)
             accident_site_angle     = self.drone.yaw - np.radians(accident_site_degree)
 
+            # Site distance
+            yvals                           = np.array([float((bear_bounding_box[1] + bear_bounding_box[3])/2)])
+            phi                             = (self.vertical_fov/2) - (((height - yvals) / height) * self.vertical_fov)
+            angle                           = np.radians(90 - (phi - theta - zeta))
+            distance                        = self.drone.altitude * np.tan(angle)
+            self.drone.siteDistance         = np.average(distance)
+
         # Navigate
-        height, _, _                        = origImg.shape
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
 
         # Always update the guide line here
@@ -68,8 +87,6 @@ class DroneVision:
             # Calculate distance to front guide
             yvals                           = np.array([float(guideLine[0][1]), float(guideLine[1][1])])
             phi                             = (self.vertical_fov/2) - (((height - yvals) / height) * self.vertical_fov)
-            theta                           = self.drone.camera_tilt
-            zeta                            = np.degrees(self.drone.pitch)
             angle                           = np.radians(90 - (phi - theta - zeta))
             distance                        = self.drone.altitude * np.tan(angle)
             averageDistance                 = np.average(distance)

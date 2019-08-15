@@ -148,8 +148,11 @@ class AutonomousController:
                 self.visualScale.setNorth(self.drone.yaw)
                 self.goodFound      = True
                 self.goalTracker.setOrientationTarget(self.visualScale.northWall)
-                self.goalTracker.setDistanceTarget(3, False, self.moved_in_middle)
+                self.goalTracker.setDistanceTarget(3.5, False, self.moved_in_middle)
         return self.directionFixed
+
+    def go_up_high(self):
+        self.goalTracker.setHeightTarget(1.3, False, self.moved_in_middle)
 
     def moved_in_middle(self):
         # Now turn right
@@ -159,13 +162,10 @@ class AutonomousController:
 
     def turned_on_right(self):
         self.vision.expectedDistance = self.drone.guideDistance
-        self.goalTracker.setDistanceTarget(3, False, self.go_up_high)
+        self.goalTracker.setDistanceTarget(3, False, self.swipe_the_ground)
 
-    def go_up_high(self):
-        self.goalTracker.setHeightTarget(1.5, True, self.prepare_to_land)
-
-    # def swipe_the_ground(self):
-    #     self.goalTracker.setSwipeTarget(self.prepare_to_land)
+    def swipe_the_ground(self):
+        self.goalTracker.setSwipeTarget(self.measure_distance)
 
     def prepare_to_land(self):
         self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
@@ -174,11 +174,20 @@ class AutonomousController:
         self.visualScale.getFastLocation(self.get_location)
 
     def get_location(self, x, y):
-        print("Location is: {0:.2f}, {1:.2f}\n\n\r".format(x, y))
+        print("Location is: {0:.2f}, {1:.2f}\n\n".format(x, y))
+
+        if self.drone.vehicleFound and self.drone.siteAngle:
+            angularDistance = abs(self.goalTracker.getAngularError(self.drone.siteAngle, self.visualScale.southWall))
+            siteX = x - (self.drone.siteDistance * np.cos(angularDistance))
+            siteY = y + (self.drone.siteDistance * np.sin(angularDistance))
+            print("Site Location is: {0:.2f}, {1:.2f}\n\n".format(siteX, siteY))
+
         self.drone.land()
 
     def run(self):
         self.print_help()
+
+        site_found = False
 
         while not rospy.is_shutdown():
             self.rate.sleep()
@@ -189,8 +198,6 @@ class AutonomousController:
                 self.navigate()
                 self.move_cam()
             self.print_status()
-
-            site_found = False
 
             # Drone autonomy
             if self.autonomous:
@@ -203,7 +210,8 @@ class AutonomousController:
 
                 if self.drone.vehicleFound and self.drone.siteAngle is not None and not site_found:
                     self.goalTracker.reset()
-                    self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.drone.land)
+                    site_found = True
+                    self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.measure_distance)
 
             self.drone.process()
             # End of Autonomy
