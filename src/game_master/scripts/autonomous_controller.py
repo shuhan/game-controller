@@ -148,7 +148,7 @@ class AutonomousController:
                 self.visualScale.setNorth(self.drone.yaw)
                 self.goodFound      = True
                 self.goalTracker.setOrientationTarget(self.visualScale.northWall)
-                self.goalTracker.setDistanceTarget(3.5, False, self.moved_in_middle)
+                self.goalTracker.setDistanceTarget(3.2, False, self.moved_in_middle)
         return self.directionFixed
 
     def go_up_high(self):
@@ -176,7 +176,7 @@ class AutonomousController:
     def get_location(self, x, y):
         print("Location is: {0:.2f}, {1:.2f}\n\n".format(x, y))
 
-        if self.drone.vehicleFound and self.drone.siteAngle:
+        if self.site_found:
             angularDistance = abs(self.goalTracker.getAngularError(self.drone.siteAngle, self.visualScale.southWall))
             siteX = x - (self.drone.siteDistance * np.cos(angularDistance))
             siteY = y + (self.drone.siteDistance * np.sin(angularDistance))
@@ -187,7 +187,7 @@ class AutonomousController:
     def run(self):
         self.print_help()
 
-        site_found = False
+        self.site_found = False
 
         while not rospy.is_shutdown():
             self.rate.sleep()
@@ -208,9 +208,10 @@ class AutonomousController:
                         ''' '''    
                 self.goalTracker.process()
 
-                if self.drone.vehicleFound and self.drone.siteAngle is not None and not site_found:
+                if self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
+                    print("Site Found\n\n")
                     self.goalTracker.reset()
-                    site_found = True
+                    self.site_found = True
                     self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.measure_distance)
 
             self.drone.process()

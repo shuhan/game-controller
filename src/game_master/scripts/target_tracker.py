@@ -31,7 +31,7 @@ class GoalTracker:
         self.heightAchived      = False
         self.heightCallback     = None
         
-    def setOrientationTarget(self, targetOrientation, hold=True, callback=None, max_speed=0.1):
+    def setOrientationTarget(self, targetOrientation, hold=True, callback=None, max_speed=0.2):
         self.resetSwipeTarget()
         self.enableOrientation  = True
         self.holdOrientation    = hold
@@ -112,7 +112,7 @@ class GoalTracker:
         Adjust drone orientation
         '''
         error = self.getAngularError(self.drone.yaw, self.orientationTarget)
-        if abs(error) > 0.1:
+        if abs(error) > 0.05:
             sign = error/abs(error)
             turn = sign * min([self.orientationMaxSpeed, abs(error)])
             self.drone.turn(turn)
