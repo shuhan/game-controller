@@ -112,7 +112,7 @@ class GoalTracker:
         Adjust drone orientation
         '''
         error = self.getAngularError(self.drone.yaw, self.orientationTarget)
-        if abs(error) > 0.05:
+        if abs(error) > 0.1:
             sign = error/abs(error)
             turn = sign * min([self.orientationMaxSpeed, abs(error)])
             self.drone.turn(turn)

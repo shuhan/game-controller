@@ -60,7 +60,7 @@ class VisualMeasurement:
 
         self._distanceCallback = callback
         self._distances = []
-        self.goalTracker.setOrientationTarget(self.walls[wall], True, self._startMeasurements, 1.0)
+        self.goalTracker.setOrientationTarget(self.walls[wall], True, self._startMeasurements, 0.8)
         
     def _onLocateWall(self, distance):
         
