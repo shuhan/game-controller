@@ -134,22 +134,10 @@ class AutonomousController:
         if self.char == '6':
             self.drone.cameraPanRight()
 
-    def orientate(self):
-        if self.drone.goodGuide and abs(self.drone.guideAngularError) > 0.01:
-            self.drone.turn(1.0*self.drone.guideAngularError)
-            return False
-        else:
-            return True
-
     def intial_orientate(self):
-        if not self.directionFixed and self.drone.state != self.drone.FLIGHT_STATE_NOT_FLYING:
-            self.directionFixed = self.orientate()
-            if self.directionFixed:
-                self.visualScale.setNorth(self.drone.yaw)
-                self.goodFound      = True
-                self.goalTracker.setOrientationTarget(self.visualScale.northWall)
-                self.goalTracker.setDistanceTarget(3.2, False, self.moved_in_middle)
-        return self.directionFixed
+        self.goodFound      = True
+        self.goalTracker.setOrientationTarget(self.visualScale.northWall)
+        self.goalTracker.setDistanceTarget(3.2, False, self.moved_in_middle)
 
     def go_up_high(self):
         self.goalTracker.setHeightTarget(1.3, False, self.moved_in_middle)
@@ -189,6 +177,8 @@ class AutonomousController:
 
         self.site_found = False
 
+        self.goalTracker.setVisualOrientationTarget(VisualMeasurement.NORTH, self.intial_orientate)
+
         while not rospy.is_shutdown():
             self.rate.sleep()
             if self.kb.kbhit():
@@ -202,17 +192,14 @@ class AutonomousController:
             # Drone autonomy
             if self.autonomous:
                 if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
-                    if not self.directionFixed:
-                        self.intial_orientate()
-                    else:
-                        ''' '''    
-                self.goalTracker.process()
+                    
+                    self.goalTracker.process()
 
-                if self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
-                    print("Site Found\n\n")
-                    self.goalTracker.reset()
-                    self.site_found = True
-                    self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.measure_distance)
+                    if self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
+                        print("Site Found\n\n")
+                        self.goalTracker.reset()
+                        self.site_found = True
+                        self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.measure_distance)
 
             self.drone.process()
             # End of Autonomy

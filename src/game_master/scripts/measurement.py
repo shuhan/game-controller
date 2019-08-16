@@ -1,4 +1,5 @@
 import numpy as np
+from target_tracker import GoalTracker
 
 class VisualMeasurement:
 
@@ -7,7 +8,7 @@ class VisualMeasurement:
     WEST    = 2
     SOUTH   = 3
 
-    def __init__(self, goalTracker, northToSouth=7.50, eastToWest=6.90):
+    def __init__(self, goalTracker : GoalTracker, northToSouth=7.50, eastToWest=6.90):
         self.goalTracker        = goalTracker
         self.northToSouth       = northToSouth
         self.eastToWest         = eastToWest
@@ -23,20 +24,38 @@ class VisualMeasurement:
         self._locatingWall      = 0
         self._localizationDists = []
         self._localizationWalls = []
+        self.halfPi             = np.radians(90)
 
     def setNorth(self, north):
-        halfPi                  = np.radians(90)
         self.wallInitialized    = True
         self.northWall          = north
-        self.eastWall           = north + halfPi
-        self.southWall          = north + (2*halfPi)    #Consider the rotation of Pi
-        if(self.southWall > 2*halfPi):
-            self.southWall      = north - (2*halfPi)
-        self.westWall           = north - halfPi
+        self.eastWall           = north + self.halfPi
+        self.southWall          = north + (2*self.halfPi)    #Consider the rotation of Pi
+        if(self.southWall > 2*self.halfPi):
+            self.southWall      = north - (2*self.halfPi)
+        self.westWall           = north - self.halfPi
         self.walls              = [self.eastWall, self.northWall, self.westWall, self.southWall]
 
+    def setWall(self, wall, angle):
+        '''
+        Reset wall angles based on wall orientation
+        '''
+        if wall == self.EAST:
+            north = angle - self.halfPi
+            self.setNorth(north)
+        elif wall == self.NORTH:
+            self.setNorth(angle)
+        elif wall == self.WEST:
+            north = angle + self.halfPi
+            self.setNorth(north)
+        elif wall == self.SOUTH:
+            north = angle + (2*self.halfPi)
+            if(north > 2*self.halfPi):
+                north = angle - (2*self.halfPi)
+            self.setNorth(north)
+
     def _takeMeasurement(self, distance, old_distance):
-        if distance < max([self.northToSouth, self.eastToWest]):
+        if self.goalTracker.drone.goodGuide:
             self._distances.append(distance)
         if len(self._distances) >= 10:
             self.goalTracker.drone.distanceChanged = None                 # Unset distance callback

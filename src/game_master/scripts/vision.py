@@ -15,11 +15,14 @@ from object_detector import Detector
 
 class DroneVision:
 
-    def __init__(self, drone, vfov=45, hfov=80, expectedDistance = 6.50):
+    def __init__(self, drone, vfov=45, hfov=80, expectedDistance= 6.50, northToSouth=7.50, eastToWest=6.90):
         self.drone              = drone
         self.vertical_fov       = vfov
         self.horizontal_fov     = hfov
         self.expectedDistance   = expectedDistance
+        self.northToSouth       = northToSouth
+        self.eastToWest         = eastToWest
+        self.maxDistance        = max([northToSouth, eastToWest])
         self.detector           = Detector(drone, vfov, hfov)
         self.frameTime          = 0
 
@@ -94,7 +97,7 @@ class DroneVision:
                 self.drone.guideLine        = guideLine
                 self.drone.guideTheta       = guideTheta
                 self.drone.guideAngularError= np.radians(90) - guideTheta
-                self.drone.goodGuide        = averageDistance >= self.expectedDistance - 0.5 and averageDistance <= self.expectedDistance + 0.5
+                self.drone.goodGuide        = averageDistance < self.maxDistance + 0.5 #averageDistance >= self.expectedDistance - 0.5 and averageDistance <= self.expectedDistance + 0.5
                 self.drone.setDistance(averageDistance)
 
             # Evaluate if guide is good

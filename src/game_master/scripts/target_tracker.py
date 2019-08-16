@@ -1,16 +1,21 @@
 
 import numpy as np
 from drone import BebopDrone
+from measurement import VisualMeasurement
 
 class GoalTracker:
     '''
     Helps drone to achive distance, height and orientation goal
     '''
 
-    def __init__(self, drone):
+    def __init__(self, drone : BebopDrone):
         self.drone      = drone
         self.reset()
         self.pi         = np.radians(180)
+        self.scale      = None
+
+    def setScale(self, scale : VisualMeasurement):
+        self.scale = scale
 
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
         '''
@@ -33,6 +38,7 @@ class GoalTracker:
         
     def setOrientationTarget(self, targetOrientation, hold=True, callback=None, max_speed=0.2):
         self.resetSwipeTarget()
+        self.resetVisualOrientationTarget()
         self.enableOrientation  = True
         self.holdOrientation    = hold
         self.orientationAchived = False
@@ -47,6 +53,22 @@ class GoalTracker:
         self.orientationAchived = False
         self.orientationCallback= None
         self.orientationMaxSpeed=0.1
+
+    def setVisualOrientationTarget(self, wall : int, callback=None):
+
+        if(wall in [VisualMeasurement.EAST, VisualMeasurement.NORTH, VisualMeasurement.SOUTH, VisualMeasurement.WEST]):
+            self.resetOrientationTarget()
+            self.resetSwipeTarget()
+            self.enableVisualOrientation    = True
+            self.targetWall                 = wall
+            self.visualOrientationAchived   = False
+            self.visualOrientationCallback  = callback
+    
+    def resetVisualOrientationTarget(self):
+        self.enableVisualOrientation        = False
+        self.targetWall                     = -1
+        self.visualOrientationAchived       = False
+        self.visualOrientationCallback      = None
 
     def setDistanceTarget(self, targetDistance, hold=True, callback=None):
         self.enableDistance     = True
@@ -64,6 +86,7 @@ class GoalTracker:
 
     def setSwipeTarget(self, callback=None):
         self.resetOrientationTarget()
+        self.resetVisualOrientationTarget()
         self.enableSwipe        = True
         self.swipeStarted       = False
         self.doneSwipe          = False
@@ -82,6 +105,7 @@ class GoalTracker:
         self.resetOrientationTarget()
         self.resetDistanceTarget()
         self.resetSwipeTarget()
+        self.resetVisualOrientationTarget()
 
     def getAngularError(self, currentOrientation, targetOrientation):
         error = self.drone.yaw - self.orientationTarget
@@ -123,22 +147,40 @@ class GoalTracker:
                     self.orientationCallback()
             
         return self.orientationAchived
+
+    def adjustVisualOrientation(self):
+        '''
+        Adjust drone visual orientation
+        '''
+        
+        if self.drone.goodGuide and abs(self.drone.guideAngularError) > 0.01:
+            self.drone.turn(1.0*self.drone.guideAngularError)
+        else:
+            if not self.visualOrientationAchived:
+                self.visualOrientationAchived = True
+                if self.scale is not None:
+                    self.scale.setWall(self.targetWall, self.drone.yaw)
+                if callable(self.visualOrientationCallback):
+                    self.visualOrientationCallback()
+        
+        return self.visualOrientationAchived
         
     def adjustDistance(self):
         '''
         Adjust drone distance from guide line
         '''
-        error = self.drone.guideDistance - self.distanceTarget
-        if abs(error) > 0.2:
-            sign = error/abs(error)
-            move = sign * min([0.05, abs(error)])
-            self.drone.moveX(move)
-        else:
-            if not self.distanceAchived:
-                self.distanceAchived = True
-                if self.distanceCallback is not None:
-                    self.distanceCallback()
-            
+        if self.drone.goodGuide:
+            error = self.drone.guideDistance - self.distanceTarget
+            if abs(error) > 0.2:
+                sign = error/abs(error)
+                move = sign * min([0.05, abs(error)])
+                self.drone.moveX(move)
+            else:
+                if not self.distanceAchived:
+                    self.distanceAchived = True
+                    if self.distanceCallback is not None:
+                        self.distanceCallback()
+                
         return self.distanceAchived
 
     def adjustSwipe(self):
@@ -174,6 +216,9 @@ class GoalTracker:
 
         if self.enableOrientation and (self.holdOrientation or not self.orientationAchived):
             self.adjustOrientation()
+
+        if self.enableVisualOrientation and not self.visualOrientationAchived:
+            self.adjustVisualOrientation()
 
         if self.enableDistance and (self.holdDistance or not self.distanceAchived):
             self.adjustDistance()
