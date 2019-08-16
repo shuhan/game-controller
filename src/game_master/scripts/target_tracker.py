@@ -8,14 +8,28 @@ class GoalTracker:
     Helps drone to achive distance, height and orientation goal
     '''
 
-    def __init__(self, drone : BebopDrone):
+    def __init__(self, drone):
         self.drone      = drone
         self.reset()
         self.pi         = np.radians(180)
         self.scale      = None
 
-    def setScale(self, scale : VisualMeasurement):
+    def setScale(self, scale):
         self.scale = scale
+
+    def setValueTarget(self, funcToCheck, callback):
+        if not callable(funcToCheck)  or not callable(callback):
+            raise ValueError("Invalid parameters")
+        self.enableValueTarget  = True
+        self.funcToCheck        = funcToCheck
+        self.valueCallback      = callback
+        self.valueAchived       = False
+
+    def resetValueTarget(self):
+        self.enableValueTarget  = False
+        self.funcToCheck        = None
+        self.valueCallback      = None
+        self.valueAchived       = False
 
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
         '''
@@ -54,7 +68,7 @@ class GoalTracker:
         self.orientationCallback= None
         self.orientationMaxSpeed=0.1
 
-    def setVisualOrientationTarget(self, wall : int, callback=None):
+    def setVisualOrientationTarget(self, wall, callback=None):
 
         if(wall in [VisualMeasurement.EAST, VisualMeasurement.NORTH, VisualMeasurement.SOUTH, VisualMeasurement.WEST]):
             self.resetOrientationTarget()
@@ -101,6 +115,7 @@ class GoalTracker:
         self.swipeCallback      = None
 
     def reset(self):
+        self.resetValueTarget()
         self.resetHeightTarget()
         self.resetOrientationTarget()
         self.resetDistanceTarget()
@@ -113,6 +128,17 @@ class GoalTracker:
             sign = error/abs(error)
             error = -1 * sign * (2*self.pi - abs(error))
         return error
+
+    def adjustValueTarget(self):
+        if not callable(self.funcToCheck) or not callable(self.valueCallback):
+            self.resetValueTarget()
+        
+        if self.funcToCheck():
+            if not self.valueAchived:
+                self.valueAchived = True
+                self.valueCallback()
+
+        return self.valueAchived
 
     def adjustHeight(self):
         '''
@@ -153,15 +179,16 @@ class GoalTracker:
         Adjust drone visual orientation
         '''
         
-        if self.drone.goodGuide and abs(self.drone.guideAngularError) > 0.01:
-            self.drone.turn(1.0*self.drone.guideAngularError)
-        else:
-            if not self.visualOrientationAchived:
-                self.visualOrientationAchived = True
-                if self.scale is not None:
-                    self.scale.setWall(self.targetWall, self.drone.yaw)
-                if callable(self.visualOrientationCallback):
-                    self.visualOrientationCallback()
+        if self.drone.goodGuide:
+            if abs(self.drone.guideAngularError) > 0.01:
+                self.drone.turn(1.0*self.drone.guideAngularError)
+            else:
+                if not self.visualOrientationAchived:
+                    self.visualOrientationAchived = True
+                    if self.scale is not None:
+                        self.scale.setWall(self.targetWall, self.drone.yaw)
+                    if callable(self.visualOrientationCallback):
+                        self.visualOrientationCallback()
         
         return self.visualOrientationAchived
         
@@ -211,6 +238,9 @@ class GoalTracker:
         '''
         This shall be called on every tick so that it can update the target
         '''
+        if self.enableValueTarget and not self.valueAchived:
+            self.adjustValueTarget()
+
         if self.enableHeight and (self.holdHeight or not self.heightAchived):
             self.adjustHeight()
 

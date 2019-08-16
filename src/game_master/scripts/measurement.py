@@ -1,5 +1,4 @@
 import numpy as np
-from target_tracker import GoalTracker
 
 class VisualMeasurement:
 
@@ -8,10 +7,11 @@ class VisualMeasurement:
     WEST    = 2
     SOUTH   = 3
 
-    def __init__(self, goalTracker : GoalTracker, northToSouth=7.50, eastToWest=6.90):
+    def __init__(self, goalTracker, northToSouth=7.50, eastToWest=6.90):
         self.goalTracker        = goalTracker
         self.northToSouth       = northToSouth
         self.eastToWest         = eastToWest
+        self.maxDistance        = max([northToSouth, eastToWest])
         self.wallInitialized    = False
         self.northWall          = 0
         self.southWall          = 0
@@ -55,9 +55,9 @@ class VisualMeasurement:
             self.setNorth(north)
 
     def _takeMeasurement(self, distance, old_distance):
-        if self.goalTracker.drone.goodGuide:
+        if distance < self.maxDistance + 0.5:
             self._distances.append(distance)
-        if len(self._distances) >= 10:
+        if len(self._distances) >= 4:
             self.goalTracker.drone.distanceChanged = None                 # Unset distance callback
             if callable(self._distanceCallback):
                 distances = np.array(self._distances)
@@ -79,7 +79,7 @@ class VisualMeasurement:
 
         self._distanceCallback = callback
         self._distances = []
-        self.goalTracker.setOrientationTarget(self.walls[wall], True, self._startMeasurements, 0.5)
+        self.goalTracker.setOrientationTarget(self.walls[wall], True, self._startMeasurements, 0.8)
         
     def _onLocateWall(self, distance):
         

@@ -70,11 +70,11 @@ class DroneVision:
             accident_site_angle     = self.drone.yaw - np.radians(accident_site_degree)
 
             # Site distance
-            yvals                           = np.array([float((bear_bounding_box[1] + bear_bounding_box[3])/2)])
+            yvals                           = np.array([float(bear_bounding_box[1])])
             phi                             = (self.vertical_fov/2) - (((height - yvals) / height) * self.vertical_fov)
             angle                           = np.radians(90 - (phi - theta - zeta))
             distance                        = self.drone.altitude * np.tan(angle)
-            self.drone.siteDistance         = np.average(distance)
+            self.drone.siteDistance         = np.average(distance) * 0.6
 
         # Navigate
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
@@ -93,11 +93,11 @@ class DroneVision:
             angle                           = np.radians(90 - (phi - theta - zeta))
             distance                        = self.drone.altitude * np.tan(angle)
             averageDistance                 = np.average(distance)
-            if averageDistance < 8.0:       # Ignore if the distance is out of bound
+            if averageDistance < self.maxDistance + 0.5:       # Ignore if the distance is out of bound
                 self.drone.guideLine        = guideLine
                 self.drone.guideTheta       = guideTheta
                 self.drone.guideAngularError= np.radians(90) - guideTheta
-                self.drone.goodGuide        = averageDistance < self.maxDistance + 0.5 #averageDistance >= self.expectedDistance - 0.5 and averageDistance <= self.expectedDistance + 0.5
+                self.drone.goodGuide        = averageDistance >= self.expectedDistance - 1 and averageDistance <= self.expectedDistance + 1
                 self.drone.setDistance(averageDistance)
 
             # Evaluate if guide is good
