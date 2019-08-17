@@ -46,7 +46,7 @@ class Detector:
 
         parameters =  cv2.aruco.DetectorParameters_create()
 
-        corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(self.gray, aruco_dict, parameters=parameters)
+        corners, ids, _ = cv2.aruco.detectMarkers(self.gray, aruco_dict, parameters=parameters)
             
         if Display:
             cv2.aruco.drawDetectedMarkers(self.origImg, corners, ids)

@@ -187,7 +187,7 @@ class AutonomousController:
         print("Location is: {0:.2f}, {1:.2f}\n\n".format(x, y))
 
         if self.site_found:
-            angularDistance = abs(self.goalTracker.getAngularError(self.siteAngle, self.visualScale.southWall))
+            angularDistance = self.goalTracker.getAngularError(self.siteAngle, self.visualScale.southWall)
             siteX = x - (self.siteDistance * np.cos(angularDistance))
             siteY = y + (self.siteDistance * np.sin(angularDistance))
             print("Site Location is: {0:.2f}, {1:.2f}\n\n".format(siteX, siteY))

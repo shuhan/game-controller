@@ -57,7 +57,7 @@ class VisualMeasurement:
     def _takeMeasurement(self, distance, old_distance):
         if distance < self.maxDistance + 0.5:
             self._distances.append(distance)
-        if len(self._distances) >= 4:
+        if len(self._distances) >= 10:
             self.goalTracker.drone.distanceChanged = None                 # Unset distance callback
             if callable(self._distanceCallback):
                 distances = np.array(self._distances)
@@ -79,7 +79,7 @@ class VisualMeasurement:
 
         self._distanceCallback = callback
         self._distances = []
-        self.goalTracker.setOrientationTarget(self.walls[wall], True, self._startMeasurements, 0.8)
+        self.goalTracker.setOrientationTarget(self.walls[wall], True, self._startMeasurements, 0.1)
         
     def _onLocateWall(self, distance):
         
