@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 import sys
+import os
+from os.path import expanduser
 import rospy
 import numpy as np
+import cv2
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
@@ -172,7 +175,14 @@ class AutonomousController:
         return self.drone.vehicleFound and self.drone.siteAngle is not None
 
     def wait_for_reading(self):
-        self.goalTracker.setValueTarget(self.site_in_view, self.measure_distance)
+        self.goalTracker.setValueTarget(self.site_in_view, self.take_a_photo)
+
+    def take_a_photo(self):
+        home = expanduser("~")
+        image_path  = os.path.join(home, "accident_site.png")
+        cv2.imwrite(image_path, self.drone.frame)
+
+        self.drone.land()
 
     def measure_distance(self):
 
