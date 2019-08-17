@@ -4,7 +4,6 @@ Contains the MR. York and His vehicle detector
 
 import cv2
 import numpy as np
-# from ar_markers.detect import detect_markers
 
 class Detector:
 
