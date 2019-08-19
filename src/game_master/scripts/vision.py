@@ -59,6 +59,7 @@ class DroneVision:
 
         site_found = False
         accident_site_angle = None
+        siteFramePosition = None
 
         if bear_bounding_box is not None and vehicle_bounding_box is not None:
             #distance        = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
@@ -75,6 +76,7 @@ class DroneVision:
             angle                           = np.radians(90 - (phi - theta - zeta))
             distance                        = self.drone.altitude * np.tan(angle)
             self.drone.siteDistance         = np.average(distance) * 0.6
+            siteFramePosition               = ((bear_bounding_box[0] + bear_bounding_box[2])/2, (bear_bounding_box[1] + bear_bounding_box[3])/2)
 
         # Navigate
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
@@ -84,7 +86,7 @@ class DroneVision:
         self.drone.bearFound                = site_found
         self.drone.vehicleFound             = site_found
         self.drone.siteAngle                = accident_site_angle
-        
+        self.drone.siteFramePosition        = siteFramePosition
 
         if guideLine is not None:
             # Calculate distance to front guide
