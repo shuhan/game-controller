@@ -60,6 +60,7 @@ class AutonomousController:
         self.backYaw                = 0
         self.targetWall             = 0
         self.autonomous             = False
+        self.tiltSetCounter         = 0         
 
     def print_help(self):
         # Upcoming Controller
@@ -187,23 +188,38 @@ class AutonomousController:
 
         self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
 
+    def check_tilt_set(self):
+        self.tiltSetCounter += 1
+        return self.tiltSetCounter > 15
+
+    def navigate_to_site(self):
+        self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
+
     def target_in_window(self):
-        if self.drone.camera_tilt < 70:
+        if self.drone.camera_tilt > -70:
+            
             self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
-            self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
+            self.lastKnownPosition = None
+            self.tiltSetCounter = 0
+
+            self.goalTracker.setValueTarget(self.check_tilt_set, self.navigate_to_site)
         else:
+            self.goalTracker.reset()
             print("On Accident site\n\n")
 
     def get_point_target(self):
         if self.drone.siteFramePosition is not None:
-            return np.array(self.drone.siteFramePosition), np.array([self.vision.width/2, self.vision.height/2])
+            self.lastKnownPosition = self.drone.siteFramePosition
+
+        if self.lastKnownPosition is not None:
+            return np.array(self.lastKnownPosition), np.array([self.vision.width/2, self.vision.height/2])
         else:
             '''
             Wait for site position to be available
                 - move camera up and down
                 - We could also move around or swipe
             '''
-            self.drone.cameraControl(self.drone.camera_tilt - random.randint(-2, 5), self.drone.camera_pan)
+            # self.drone.cameraControl(self.drone.camera_tilt - random.randint(-2, 5), self.drone.camera_pan)
             return None, np.array([self.vision.width/2, self.vision.height/2])
 
     def measure_distance(self):

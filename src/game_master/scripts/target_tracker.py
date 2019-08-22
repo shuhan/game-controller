@@ -182,19 +182,18 @@ class GoalTracker:
             return self.pointAchived
 
         errorVector                 = self.getPointError(currentPoint, targetPoint)
-        errorMagnitude              = np.linalg.norm(errorVector)
 
         #Lets try to set a 10 pixel error max we can make it configureable
-        if errorMagnitude > 10:
+        if abs(errorVector[0]) > 50 or errorVector[1] > 0:
             
-            if abs(errorVector[1]) > 0:
+            if errorVector[1] > 0:
                 signX = errorVector[1]/abs(errorVector[1])
                 moveX = signX * min([0.03, abs(errorVector[1])])
                 self.drone.moveX(moveX)
 
-            if abs(errorVector[0]) > 0:
+            if abs(errorVector[0]) > 50:
                 signY = (errorVector[0]/abs(errorVector[0]))
-                moveY = signY * min([0.03, abs(errorVector[0])])
+                moveY = signY * min([0.05, abs(errorVector[0])])
                 self.drone.moveY(moveY)
 
         else:
