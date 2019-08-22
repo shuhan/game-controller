@@ -177,22 +177,19 @@ class AutonomousController:
         return self.drone.vehicleFound and self.drone.siteAngle is not None
 
     def wait_for_reading(self):
-        self.goalTracker.setValueTarget(self.site_in_view, self.take_a_photo)
+        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_site)
 
     def take_a_photo(self):
         home = expanduser("~")
         image_path  = os.path.join(home, "accident_site.png")
         cv2.imwrite(image_path, self.drone.frame)
 
-        print("Traveling to Accident site\n\n")
-
-        self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
-
     def check_tilt_set(self):
         self.tiltSetCounter += 1
         return self.tiltSetCounter > 15
 
     def navigate_to_site(self):
+        print("Traveling to Accident site\n\n")
         self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
 
     def target_in_window(self):
@@ -206,6 +203,7 @@ class AutonomousController:
         else:
             self.goalTracker.reset()
             print("On Accident site\n\n")
+            self.take_a_photo()
 
     def get_point_target(self):
         if self.drone.siteFramePosition is not None:
