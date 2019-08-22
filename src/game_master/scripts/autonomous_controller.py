@@ -5,6 +5,7 @@ from os.path import expanduser
 import rospy
 import numpy as np
 import cv2
+import random
 from std_msgs.msg import Empty
 from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
@@ -182,7 +183,28 @@ class AutonomousController:
         image_path  = os.path.join(home, "accident_site.png")
         cv2.imwrite(image_path, self.drone.frame)
 
-        self.drone.land()
+        print("Traveling to Accident site\n\n")
+
+        self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
+
+    def target_in_window(self):
+        if self.drone.camera_tilt < 70:
+            self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
+            self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
+        else:
+            print("On Accident site\n\n")
+
+    def get_point_target(self):
+        if self.drone.siteFramePosition is not None:
+            return np.array(self.drone.siteFramePosition), np.array([self.vision.width/2, self.vision.height/2])
+        else:
+            '''
+            Wait for site position to be available
+                - move camera up and down
+                - We could also move around or swipe
+            '''
+            self.drone.cameraControl(self.drone.camera_tilt - random.randint(-2, 5), self.drone.camera_pan)
+            return None, np.array([self.vision.width/2, self.vision.height/2])
 
     def measure_distance(self):
 

@@ -25,10 +25,15 @@ class DroneVision:
         self.maxDistance        = max([northToSouth, eastToWest])
         self.detector           = Detector(drone, vfov, hfov)
         self.frameTime          = 0
+        self.width              = 0
+        self.height             = 0
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
 
         height, width, _ = origImg.shape
+
+        self.height      = height
+        self.width       = width
         theta            = self.drone.camera_tilt
         zeta             = np.degrees(self.drone.pitch)
 
@@ -76,10 +81,11 @@ class DroneVision:
             angle                           = np.radians(90 - (phi - theta - zeta))
             distance                        = self.drone.altitude * np.tan(angle)
             self.drone.siteDistance         = np.average(distance) * 0.6
-            siteFramePosition               = ((bear_bounding_box[0] + bear_bounding_box[2])/2, (bear_bounding_box[1] + bear_bounding_box[3])/2)
+            siteFramePosition               = (int((bear_bounding_box[0] + bear_bounding_box[2])/2), int((bear_bounding_box[1] + bear_bounding_box[3])/2))
+            cv2.circle(origImg, siteFramePosition, 3, (0, 255, 255), -1)
 
         # Navigate
-        guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, True)
+        guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, False)
 
         # Always update the guide line here
         self.drone.guideLine                = guideLine

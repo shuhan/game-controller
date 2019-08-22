@@ -36,7 +36,7 @@ class GoalTracker:
         Track and navigate to a point provided by the funcToPoint function
             - It will always try to keep the location at the center of the screen
             - Func to point shall control the tilt of the camera to make it follow over the location
-            - Func to point shall return a point
+            - Func to point shall return currentPoint and targetPoint as numpy array
         '''
         if not callable(funcToPoint):
             raise ValueError("Invalid parameters")
@@ -44,14 +44,14 @@ class GoalTracker:
         self.enablePointTarget  = True
         self.funcToPoint        = funcToPoint
         self.holdPoint          = hold
-        self.poitCallback       = callback
+        self.pointCallback      = callback
         self.pointAchived       = False
 
     def resetPointTarget(self):
         self.enablePointTarget  = False
         self.funcToPoint        = None
         self.holdPoint          = False
-        self.poitCallback       = None
+        self.pointCallback      = None
         self.pointAchived       = False
 
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
@@ -165,10 +165,45 @@ class GoalTracker:
 
         return self.valueAchived
 
+    def getPointError(self, currentPoint, targetPoint):
+        return targetPoint - currentPoint
+
     def adjustPointTarget(self):
         '''
         Adjust point target based on the funToPoint callback
         '''
+        if not callable(self.funcToPoint):
+            return self.pointAchived
+
+        currentPoint, targetPoint   = self.funcToPoint()
+
+        # Don't know about point so please ignore
+        if currentPoint is None:
+            return self.pointAchived
+
+        errorVector                 = self.getPointError(currentPoint, targetPoint)
+        errorMagnitude              = np.linalg.norm(errorVector)
+
+        #Lets try to set a 10 pixel error max we can make it configureable
+        if errorMagnitude > 10:
+            
+            if abs(errorVector[1]) > 0:
+                signX = errorVector[1]/abs(errorVector[1])
+                moveX = signX * min([0.03, abs(errorVector[1])])
+                self.drone.moveX(moveX)
+
+            if abs(errorVector[0]) > 0:
+                signY = (errorVector[0]/abs(errorVector[0]))
+                moveY = signY * min([0.03, abs(errorVector[0])])
+                self.drone.moveY(moveY)
+
+        else:
+            if not self.pointAchived:
+                self.pointAchived = True
+                if callable(self.pointCallback):
+                    self.pointCallback()
+        
+        return self.pointAchived
 
 
     def adjustHeight(self):

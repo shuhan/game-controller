@@ -221,6 +221,13 @@ class BebopDrone:
         self.navi_cmd.linear.x = speed
         return self
 
+    def moveY(self, speed):
+        '''
+        Move the drone left or right with set speed
+        '''
+        self.navi_cmd.linear.y = speed
+        return self
+
     def left(self):
         '''
         Fly it on the left
