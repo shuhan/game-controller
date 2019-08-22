@@ -46,6 +46,7 @@ class GoalTracker:
         self.holdPoint          = hold
         self.pointCallback      = callback
         self.pointAchived       = False
+        self.lastTiltChanged    = 0
 
     def resetPointTarget(self):
         self.enablePointTarget  = False
@@ -53,6 +54,7 @@ class GoalTracker:
         self.holdPoint          = False
         self.pointCallback      = None
         self.pointAchived       = False
+        self.lastTiltChanged    = 0
 
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
         '''
@@ -182,19 +184,28 @@ class GoalTracker:
             return self.pointAchived
 
         errorVector                 = self.getPointError(currentPoint, targetPoint)
+        errorMagnitude              = np.linalg.norm(errorVector)
 
         #Lets try to set a 10 pixel error max we can make it configureable
-        if abs(errorVector[0]) > 50 or errorVector[1] > 0:
+        if errorMagnitude > 50 or self.drone.camera_tilt > -70:
             
             if errorVector[1] > 0:
                 signX = errorVector[1]/abs(errorVector[1])
-                moveX = signX * min([0.03, abs(errorVector[1])])
+                moveX = signX * min([0.02, abs(errorVector[1])])
                 self.drone.moveX(moveX)
+            else:
+                if self.drone.camera_tilt > -70:
+                    if self.lastTiltChanged > 6:
+                        self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
+                        self.lastTiltChanged = 0
+                    else:
+                        self.lastTiltChanged += 1
 
             if abs(errorVector[0]) > 50:
                 signY = (errorVector[0]/abs(errorVector[0]))
                 moveY = signY * min([0.05, abs(errorVector[0])])
                 self.drone.moveY(moveY)
+                self.drone.turn(moveY)
 
         else:
             if not self.pointAchived:

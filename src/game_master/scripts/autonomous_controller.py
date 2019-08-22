@@ -59,8 +59,7 @@ class AutonomousController:
         self.leftYaw                = 0
         self.backYaw                = 0
         self.targetWall             = 0
-        self.autonomous             = False
-        self.tiltSetCounter         = 0         
+        self.autonomous             = False    
 
     def print_help(self):
         # Upcoming Controller
@@ -184,26 +183,14 @@ class AutonomousController:
         image_path  = os.path.join(home, "accident_site.png")
         cv2.imwrite(image_path, self.drone.frame)
 
-    def check_tilt_set(self):
-        self.tiltSetCounter += 1
-        return self.tiltSetCounter > 15
-
     def navigate_to_site(self):
         print("Traveling to Accident site\n\n")
         self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
 
     def target_in_window(self):
-        if self.drone.camera_tilt > -70:
-            
-            self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
-            self.lastKnownPosition = None
-            self.tiltSetCounter = 0
-
-            self.goalTracker.setValueTarget(self.check_tilt_set, self.navigate_to_site)
-        else:
-            self.goalTracker.reset()
-            print("On Accident site\n\n")
-            self.take_a_photo()
+        self.goalTracker.reset()
+        print("On Accident site\n\n")
+        self.take_a_photo()
 
     def get_point_target(self):
         if self.drone.siteFramePosition is not None:
