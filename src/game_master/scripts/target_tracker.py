@@ -31,6 +31,29 @@ class GoalTracker:
         self.valueCallback      = None
         self.valueAchived       = False
 
+    def setPointTarget(self, funcToPoint, hold=True, callback=None):
+        '''
+        Track and navigate to a point provided by the funcToPoint function
+            - It will always try to keep the location at the center of the screen
+            - Func to point shall control the tilt of the camera to make it follow over the location
+            - Func to point shall return a point
+        '''
+        if not callable(funcToPoint):
+            raise ValueError("Invalid parameters")
+        self.resetDistanceTarget()
+        self.enablePointTarget  = True
+        self.funcToPoint        = funcToPoint
+        self.holdPoint          = hold
+        self.poitCallback       = callback
+        self.pointAchived       = False
+
+    def resetPointTarget(self):
+        self.enablePointTarget  = False
+        self.funcToPoint        = None
+        self.holdPoint          = False
+        self.poitCallback       = None
+        self.pointAchived       = False
+
     def setHeightTarget(self, targetHeight, hold=True, callback=None):
         '''
         Adjust hight of the drone, go up or down.
@@ -85,6 +108,7 @@ class GoalTracker:
         self.visualOrientationCallback      = None
 
     def setDistanceTarget(self, targetDistance, hold=True, callback=None):
+        self.resetPointTarget()
         self.enableDistance     = True
         self.holdDistance       = hold
         self.distanceAchived    = False
@@ -116,6 +140,7 @@ class GoalTracker:
 
     def reset(self):
         self.resetValueTarget()
+        self.resetPointTarget()
         self.resetHeightTarget()
         self.resetOrientationTarget()
         self.resetDistanceTarget()
