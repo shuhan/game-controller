@@ -165,6 +165,12 @@ class GoalTracker:
 
         return self.valueAchived
 
+    def adjustPointTarget(self):
+        '''
+        Adjust point target based on the funToPoint callback
+        '''
+
+
     def adjustHeight(self):
         '''
         Adjust drone height
@@ -265,6 +271,9 @@ class GoalTracker:
         '''
         if self.enableValueTarget and not self.valueAchived:
             self.adjustValueTarget()
+
+        if self.enablePointTarget and (self.holdPoint or not self.pointAchived):
+            self.adjustPointTarget()
 
         if self.enableHeight and (self.holdHeight or not self.heightAchived):
             self.adjustHeight()
