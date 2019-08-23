@@ -39,6 +39,12 @@ KEY_CONFIGS = OrderedDict([
 
 class AutonomousController:
 
+    INTENT_FIND_THE_SITE        = 0
+    INTENT_NAVIGATE_TO_SITE     = 1
+    INTENT_FIND_GROUND_ROBOT    = 2
+    INTENT_DIRECT_GROUND_ROBOT  = 3
+    INTENT_RETURN_TO_BASE       = 4
+
     def __init__(self):
 
         rospy.init_node('drone_controller')
@@ -59,7 +65,10 @@ class AutonomousController:
         self.leftYaw                = 0
         self.backYaw                = 0
         self.targetWall             = 0
-        self.autonomous             = False    
+        self.autonomous             = False
+        self.groundSwipeCount       = 0
+        self.intent                 = self.INTENT_FIND_THE_SITE
+        self.groundRobotFound       = False
 
     def print_help(self):
         # Upcoming Controller
@@ -151,7 +160,7 @@ class AutonomousController:
         self.goalTracker.setDistanceTarget(3, False, self.moved_in_middle)
 
     def go_up_high(self):
-        self.goalTracker.setHeightTarget(1.3, False, self.moved_in_middle)
+        self.goalTracker.setHeightTarget(1.7, False, self.moved_in_middle)
 
     def moved_in_middle(self):
         # Now turn right
@@ -191,6 +200,19 @@ class AutonomousController:
         self.goalTracker.reset()
         print("On Accident site\n\n")
         self.take_a_photo()
+        self.intent = self.INTENT_FIND_GROUND_ROBOT
+        self.drone.cameraControl(-20, 0)
+        print("Looking for ground robot\n\n")
+        self.goalTracker.setHeightTarget(1.5, False)
+        self.goalTracker.setSwipeTarget(self.keep_swiping_ground)
+
+    def keep_swiping_ground(self):
+        self.groundSwipeCount += 1
+
+        if self.groundSwipeCount < 3:
+            self.goalTracker.setSwipeTarget(self.keep_swiping_ground)
+        else:
+            print("Couldn't find ground robot\n\n")
 
     def get_point_target(self):
         if self.drone.siteFramePosition is not None:
@@ -251,11 +273,24 @@ class AutonomousController:
 
                     self.goalTracker.process()
 
-                    if self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
+                    if self.intent == self.INTENT_FIND_THE_SITE and self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
                         print("Site Found\n\n")
                         self.goalTracker.reset()
                         self.site_found = True
+                        self.intent = self.INTENT_NAVIGATE_TO_SITE
+                        #Just go up don't care about callback
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_for_reading)
+
+                    if self.intent == self.INTENT_FIND_GROUND_ROBOT and self.vision.groundRobotVisible:
+                        print("Ground Vehicle Found\n\n")
+                        self.goalTracker.reset()
+                        self.intent = self.INTENT_DIRECT_GROUND_ROBOT
+                        self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
+                        print("Requested vector: {0:.4f}, {1:.2f}\n\n".format(self.vision.groundRobotOrientation, self.vision.groundRobotDistance))
+
+                    if self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
+                        self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
+                        print("Requested vector: {0:.4f}, {1:.2f}\n\n".format(self.vision.groundRobotOrientation, self.vision.groundRobotDistance))
 
             self.drone.process()
             # End of Autonomy

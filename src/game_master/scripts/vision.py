@@ -15,18 +15,67 @@ from object_detector import Detector
 
 class DroneVision:
 
+    EAST_ENTRANCE_MARKER_ID     = 39
+    NORTH_ENTRANCE_MARKER_ID    = 41
+    LANDING_PAD_MARKER_ID       = 40
+    GROUND_ROBOT_MARKER_IDS     = [1, 2, 3, 4]
+    RED_VEHICLE_MARKER_ID       = 10
+    ALL_MARKER_IDS              = [EAST_ENTRANCE_MARKER_ID, NORTH_ENTRANCE_MARKER_ID, LANDING_PAD_MARKER_ID, RED_VEHICLE_MARKER_ID] + GROUND_ROBOT_MARKER_IDS
+
     def __init__(self, drone, vfov=45, hfov=80, expectedDistance= 6.50, northToSouth=7.50, eastToWest=6.90):
-        self.drone              = drone
-        self.vertical_fov       = vfov
-        self.horizontal_fov     = hfov
-        self.expectedDistance   = expectedDistance
-        self.northToSouth       = northToSouth
-        self.eastToWest         = eastToWest
-        self.maxDistance        = max([northToSouth, eastToWest])
-        self.detector           = Detector(drone, vfov, hfov)
-        self.frameTime          = 0
-        self.width              = 0
-        self.height             = 0
+        self.drone                  = drone
+        self.vertical_fov           = vfov
+        self.horizontal_fov         = hfov
+        self.expectedDistance       = expectedDistance
+        self.northToSouth           = northToSouth
+        self.eastToWest             = eastToWest
+        self.maxDistance            = max([northToSouth, eastToWest])
+        self.detector               = Detector(drone, vfov, hfov)
+        self.frameTime              = 0
+        self.width                  = 0
+        self.height                 = 0
+        # Ground robot detection parameters
+        self.groundRobotVisible     = False
+        self.groundRobotOrientation = None
+        self.groundRobotDistance    = None
+        self.groundRobotAngle       = None
+        # East gate
+        self.eastGateVisible        = False
+        self.eastGateOrientation    = None
+        self.eastGateDistance       = None
+        self.eastGateAngle          = None
+        # North gate
+        self.northGateVisible       = False
+        self.northGateOrientation   = None
+        self.northGateDistance      = None
+        self.northGateAngle         = None
+        # Landing pad
+        self.landingPadVisible      = False
+        self.landingPadOrientation  = None
+        self.landingPadDistance     = None
+        self.landingPadAngle        = None
+
+    def unit_vector(self, vector):
+        """ Returns the unit vector of the vector.  """
+        return vector / np.linalg.norm(vector)
+
+    def angle_between(self, v1, v2):
+        """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+            >>> + identifies counter colockwise rotation - identifies clock wise rotation
+        """
+        v1_u = self.unit_vector(v1)
+        v2_u = self.unit_vector(v2)
+        sign = 1
+        if np.dot(v1_u, v2_u) < 0:
+            sign = -1
+        return sign * np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
 
@@ -47,24 +96,64 @@ class DroneVision:
 
         corners, ids = self.detector.getMarkers()
 
+        # On every frame set visiblitiy to false and then calculate them again
+        self.groundRobotVisible     = False
+        self.northGateVisible       = False
+        self.eastGateVisible        = False
+        self.landingPadVisible      = False
+        siteFramePosition           = None
+
+        # Marker identification
         if ids is not None:
             for i in range(len(ids)):
-                if ids[i][0] == 10:
-                    vehicle_found   = True
-                    bear_found      = True
-                    bear_bounding_box = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 20, corners[i][0][0][1] + 20]
-                    vehicle_bounding_box = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 40, corners[i][0][0][1] + 40]
+                if ids[i][0] not in self.ALL_MARKER_IDS:
+                    continue
+                markerCentre = (corners[i][0][:, 0].mean(), corners[i][0][:, 1].mean())
+                cv2.circle(origImg, markerCentre, 3, (0, 255, 255), -1)
+                markerFront = (corners[i][0][0:2, 0].mean(), corners[i][0][0:2, 1].mean())
+                cv2.circle(origImg, markerFront, 3, (255, 255, 0), -1)
+                markerAngleDeg = (float((width/2) - markerCentre[0])/float(width/2)) * (float(self.horizontal_fov)/2)
+                droneCentre = np.array([width/2, height])
+
+                v1 = np.array(markerFront) - np.array(markerCentre)
+                v2 = np.array(droneCentre) - np.array(markerCentre)
+
+                markerOrientation   = self.angle_between(v1, v2)
+                mPhi                = (self.vertical_fov/2) - (((height - markerCentre[1]) / height) * self.vertical_fov)
+                mAngle              = np.radians(90 - (mPhi - theta - zeta))
+                markerDistance      = self.drone.altitude * np.tan(mAngle)
+
+                if ids[i][0] == self.RED_VEHICLE_MARKER_ID:
+                    vehicle_found           = True
+                    bear_found              = True
+                    bear_bounding_box       = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 20, corners[i][0][0][1] + 20]
+                    vehicle_bounding_box    = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 40, corners[i][0][0][1] + 40]
+                    siteFramePosition       = markerCentre
                     # print(bear_bounding_box)
                     # print("\n\n")
-
-
-        # if len(markers) > 0:
-        #     print(markers[0])
-        #     print("\n\n")
+                elif ids[i][0] in self.GROUND_ROBOT_MARKER_IDS:
+                    self.groundRobotVisible     = True
+                    self.groundRobotAngle       = self.drone.yaw - np.radians(markerAngleDeg)
+                    self.groundRobotDistance    = markerDistance
+                    self.groundRobotOrientation = markerOrientation
+                elif ids[i][0] == self.EAST_ENTRANCE_MARKER_ID:
+                    self.eastGateVisible = True
+                    self.eastGateAngle = self.drone.yaw - np.radians(markerAngleDeg)
+                    self.eastGateDistance = markerDistance
+                    self.eastGateOrientation = markerOrientation
+                elif ids[i][0] == self.NORTH_ENTRANCE_MARKER_ID:
+                    self.northGateVisible = True
+                    self.northGateAngle = self.drone.yaw - np.radians(markerAngleDeg)
+                    self.northGateDistance = markerDistance
+                    self.northGateOrientation = markerOrientation
+                elif ids[i][0] == self.LANDING_PAD_MARKER_ID:
+                    self.landingPadVisible = True
+                    self.landingPadAngle = self.drone.yaw - np.radians(markerAngleDeg)
+                    self.landingPadDistance = markerDistance
+                    self.landingPadOrientation = markerOrientation
 
         site_found = False
         accident_site_angle = None
-        siteFramePosition = None
 
         if bear_bounding_box is not None and vehicle_bounding_box is not None:
             #distance        = ED.euclidean((bear_bounding_box[0], bear_bounding_box[1]), (vehicle_bounding_box[0], vehicle_bounding_box[1]))
@@ -81,8 +170,6 @@ class DroneVision:
             angle                           = np.radians(90 - (phi - theta - zeta))
             distance                        = self.drone.altitude * np.tan(angle)
             self.drone.siteDistance         = np.average(distance) * 0.6
-            siteFramePosition               = (int((bear_bounding_box[0] + bear_bounding_box[2])/2), int((bear_bounding_box[1] + bear_bounding_box[3])/2))
-            cv2.circle(origImg, siteFramePosition, 3, (0, 255, 255), -1)
 
         # Navigate
         guideLine, guideTheta               = self.findFrontGuide(origImg, frameTime, False)
