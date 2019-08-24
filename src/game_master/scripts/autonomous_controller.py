@@ -155,7 +155,7 @@ class AutonomousController:
         self.visualScale.setNorth(self.drone.yaw)
         self.goodFound      = True
         print("Orientation done\n\n")
-        self.drone.cameraControl(-15, 0)
+        self.drone.cameraControl(-20, 0)
         self.goalTracker.setOrientationTarget(self.visualScale.northWall)
         self.goalTracker.setDistanceTarget(3, False, self.moved_in_middle)
 
@@ -217,6 +217,12 @@ class AutonomousController:
     def get_point_target(self):
         if self.drone.siteFramePosition is not None:
             self.lastKnownPosition = self.drone.siteFramePosition
+            self.frameKnownValidity = 0
+        else:
+            # Only allow last known possition for next 3 frames
+            self.frameKnownValidity += 1
+            if self.frameKnownValidity > 3:
+                self.lastKnownPosition = None
 
         if self.lastKnownPosition is not None:
             return np.array(self.lastKnownPosition), np.array([self.vision.width/2, self.vision.height/2])
@@ -274,12 +280,19 @@ class AutonomousController:
                     self.goalTracker.process()
 
                     if self.intent == self.INTENT_FIND_THE_SITE and self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
+                        # Turn off line processing
+                        self.vision.processLine = False
+                        # Increase number of frames per second
+                        self.drone.frame_skip = 10
                         print("Site Found\n\n")
                         self.goalTracker.reset()
                         self.site_found = True
                         self.intent = self.INTENT_NAVIGATE_TO_SITE
                         #Just go up don't care about callback
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_for_reading)
+
+                    if self.intent == self.INTENT_NAVIGATE_TO_SITE:
+                        pass
 
                     if self.intent == self.INTENT_FIND_GROUND_ROBOT and self.vision.groundRobotVisible:
                         print("Ground Vehicle Found\n\n")
@@ -291,7 +304,7 @@ class AutonomousController:
                     if self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
                         print("Requested vector: {0:.4f}, {1:.2f}\n\n".format(self.vision.groundRobotOrientation, self.vision.groundRobotDistance))
-
+            
             self.drone.process()
             # End of Autonomy
         

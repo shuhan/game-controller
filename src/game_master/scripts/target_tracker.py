@@ -195,16 +195,20 @@ class GoalTracker:
                 self.drone.moveX(moveX)
             else:
                 if self.drone.camera_tilt > -70:
-                    if self.lastTiltChanged > 6:
+                    if self.lastTiltChanged > 10:
+                        print(targetPoint)
+                        print(currentPoint)
+                        print(errorVector)
+                        print("Looking further down\n\n")
                         self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
                         self.lastTiltChanged = 0
                     else:
                         self.lastTiltChanged += 1
 
-            if abs(errorVector[0]) > 50:
+            if abs(errorVector[0]) > 10:
                 signY = (errorVector[0]/abs(errorVector[0]))
                 moveY = signY * min([0.05, abs(errorVector[0])])
-                self.drone.moveY(moveY)
+                #self.drone.moveY(moveY)
                 self.drone.turn(moveY)
 
         else:
@@ -295,6 +299,7 @@ class GoalTracker:
         if self.swipeStarted:
             if abs(error) > 0.2:
                 self.drone.turn(turn)
+                self.drone.moveY(-0.5 * turn)
             else:
                 if not self.doneSwipe:
                     self.doneSwipe = True
@@ -307,6 +312,7 @@ class GoalTracker:
                 self.swipeStarted = True
             
             self.drone.turn(turn)
+            self.drone.moveY(-0.5 * turn)
             
         return self.doneSwipe
 
