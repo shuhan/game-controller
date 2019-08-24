@@ -39,21 +39,25 @@ class DroneVision:
         self.groundRobotOrientation = None
         self.groundRobotDistance    = None
         self.groundRobotAngle       = None
+        self.groundFramePosition    = None
         # East gate
         self.eastGateVisible        = False
         self.eastGateOrientation    = None
         self.eastGateDistance       = None
         self.eastGateAngle          = None
+        self.eastFramePosition      = None
         # North gate
         self.northGateVisible       = False
         self.northGateOrientation   = None
         self.northGateDistance      = None
         self.northGateAngle         = None
+        self.northFramePosition     = None
         # Landing pad
         self.landingPadVisible      = False
         self.landingPadOrientation  = None
         self.landingPadDistance     = None
         self.landingPadAngle        = None
+        self.landingFramePosition   = None
         # New frame flag
         self.newFrameProcessed      = False
         self.processLine            = True
@@ -143,21 +147,25 @@ class DroneVision:
                         self.groundRobotAngle       = self.drone.yaw - np.radians(markerAngleDeg)
                         self.groundRobotDistance    = markerDistance
                         self.groundRobotOrientation = markerOrientation
+                        self.groundFramePosition    = markerCentre
                     elif ids[i][0] == self.EAST_ENTRANCE_MARKER_ID:
-                        self.eastGateVisible = True
-                        self.eastGateAngle = self.drone.yaw - np.radians(markerAngleDeg)
-                        self.eastGateDistance = markerDistance
-                        self.eastGateOrientation = markerOrientation
+                        self.eastGateVisible        = True
+                        self.eastGateAngle          = self.drone.yaw - np.radians(markerAngleDeg)
+                        self.eastGateDistance       = markerDistance
+                        self.eastGateOrientation    = markerOrientation
+                        self.eastFramePosition      = markerCentre
                     elif ids[i][0] == self.NORTH_ENTRANCE_MARKER_ID:
-                        self.northGateVisible = True
-                        self.northGateAngle = self.drone.yaw - np.radians(markerAngleDeg)
-                        self.northGateDistance = markerDistance
-                        self.northGateOrientation = markerOrientation
+                        self.northGateVisible       = True
+                        self.northGateAngle         = self.drone.yaw - np.radians(markerAngleDeg)
+                        self.northGateDistance      = markerDistance
+                        self.northGateOrientation   = markerOrientation
+                        self.northFramePosition     = markerCentre
                     elif ids[i][0] == self.LANDING_PAD_MARKER_ID:
-                        self.landingPadVisible = True
-                        self.landingPadAngle = self.drone.yaw - np.radians(markerAngleDeg)
-                        self.landingPadDistance = markerDistance
-                        self.landingPadOrientation = markerOrientation
+                        self.landingPadVisible      = True
+                        self.landingPadAngle        = self.drone.yaw - np.radians(markerAngleDeg)
+                        self.landingPadDistance     = markerDistance
+                        self.landingPadOrientation  = markerOrientation
+                        self.landingFramePosition   = markerCentre
 
             site_found = False
             accident_site_angle = None

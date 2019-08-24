@@ -194,6 +194,9 @@ class AutonomousController:
 
     def navigate_to_site(self):
         print("Traveling to Accident site\n\n")
+        # Adjust camera position
+        angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.drone.siteFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
+        self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
         self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
 
     def target_in_window(self):
@@ -291,13 +294,14 @@ class AutonomousController:
                         #Just go up don't care about callback
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_for_reading)
 
-                    if self.intent == self.INTENT_NAVIGATE_TO_SITE:
-                        pass
-
                     if self.intent == self.INTENT_FIND_GROUND_ROBOT and self.vision.groundRobotVisible:
                         print("Ground Vehicle Found\n\n")
                         self.goalTracker.reset()
                         self.intent = self.INTENT_DIRECT_GROUND_ROBOT
+                        # Adjust camera position
+                        angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.groundFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
+                        self.drone.cameraControl(self.drone.camera_tilt - int(angular_error), self.drone.camera_pan)
+                        # Orientate towards the robot
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
                         print("Requested vector: {0:.4f}, {1:.2f}\n\n".format(self.vision.groundRobotOrientation, self.vision.groundRobotDistance))
 

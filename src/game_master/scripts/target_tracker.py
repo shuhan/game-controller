@@ -187,7 +187,7 @@ class GoalTracker:
         errorMagnitude              = np.linalg.norm(errorVector)
 
         #Lets try to set a 10 pixel error max we can make it configureable
-        if errorMagnitude > 50 or self.drone.camera_tilt > -70:
+        if errorMagnitude > 100 or self.drone.camera_tilt > -70:
             
             if errorVector[1] > 0:
                 signX = errorVector[1]/abs(errorVector[1])
@@ -295,11 +295,10 @@ class GoalTracker:
         Adjust drone swipe
         '''
         error = self.drone.yaw - self.swipeTarget
-        turn = -0.1
+        turn = -0.2
         if self.swipeStarted:
             if abs(error) > 0.2:
                 self.drone.turn(turn)
-                self.drone.moveY(-0.5 * turn)
             else:
                 if not self.doneSwipe:
                     self.doneSwipe = True
@@ -312,7 +311,6 @@ class GoalTracker:
                 self.swipeStarted = True
             
             self.drone.turn(turn)
-            self.drone.moveY(-0.5 * turn)
             
         return self.doneSwipe
 
