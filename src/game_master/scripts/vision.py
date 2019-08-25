@@ -34,6 +34,7 @@ class DroneVision:
         self.frameTime              = 0
         self.width                  = 0
         self.height                 = 0
+        self.pi         = np.radians(180)
         # Ground robot detection parameters
         self.groundRobotVisible     = False
         self.groundRobotOrientation = None
@@ -63,27 +64,15 @@ class DroneVision:
         self.processLine            = True
         self.processMarker          = True
 
-    def unit_vector(self, vector):
-        """ Returns the unit vector of the vector.  """
-        return vector / np.linalg.norm(vector)
+    def angle_between(self, a, b, c):
+        ang = math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0])
 
-    def angle_between(self, v1, v2):
-        """ Returns the angle in radians between vectors 'v1' and 'v2'::
+        if ang > self.pi:
+            ang = self.pi - ang
+        elif ang < -1 * self.pi:
+            ang = (2*self.pi) + ang
 
-            >>> angle_between((1, 0, 0), (0, 1, 0))
-            1.5707963267948966
-            >>> angle_between((1, 0, 0), (1, 0, 0))
-            0.0
-            >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-            >>> + identifies counter colockwise rotation - identifies clock wise rotation
-        """
-        v1_u = self.unit_vector(v1)
-        v2_u = self.unit_vector(v2)
-        sign = 1
-        if np.dot(v1_u, v2_u) < 0:
-            sign = -1
-        return sign * np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+        return ang
 
     def calculateFrontalDistance(self, origImg, frameTime, Display=True):
 
@@ -126,10 +115,10 @@ class DroneVision:
                     markerAngleDeg = (float((width/2) - markerCentre[0])/float(width/2)) * (float(self.horizontal_fov)/2)
                     droneCentre = np.array([width/2, height])
 
-                    v1 = np.array(markerFront) - np.array(markerCentre)
-                    v2 = np.array(droneCentre) - np.array(markerCentre)
+                    # v1 = np.array(markerFront) - np.array(markerCentre)
+                    # v2 = np.array(droneCentre) - np.array(markerCentre)
 
-                    markerOrientation   = self.angle_between(v1, v2)
+                    markerOrientation   = self.angle_between(markerFront, markerCentre, droneCentre)
                     mPhi                = (self.vertical_fov/2) - (((height - markerCentre[1]) / height) * self.vertical_fov)
                     mAngle              = np.radians(90 - (mPhi - theta - zeta))
                     markerDistance      = self.drone.altitude * np.tan(mAngle)

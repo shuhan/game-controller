@@ -6,7 +6,7 @@ import rospy
 import numpy as np
 import cv2
 import random
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, String, UInt8, Bool
 from geometry_msgs.msg import Twist
 from bebop_msgs.msg import Ardrone3PilotingStateAltitudeChanged, Ardrone3CameraStateOrientation, CommonCommonStateBatteryStateChanged
 from keyboard import KBHit
@@ -70,6 +70,11 @@ class AutonomousController:
         self.intent                 = self.INTENT_FIND_THE_SITE
         self.groundRobotFound       = False
 
+        self.battery_status_pub     = rospy.Publisher('/drone/battery_status', UInt8, queue_size=1)
+        self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
+        self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
+        self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
+
     def print_help(self):
         # Upcoming Controller
         # print('Control:')
@@ -83,6 +88,9 @@ class AutonomousController:
         else:
             self.status_init = False
         print("Speed {0} Altitude {1:.2f} Tilt {2} Battery {3}% Status {4} Back Yaw {5:.2f}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.battery, self.drone.getStateStr(), self.backYaw))
+
+    def landrobot_found_object(self, data):
+        pass
 
     def adjust_speed(self):
         if self.char == '+':
@@ -303,11 +311,26 @@ class AutonomousController:
                         self.drone.cameraControl(self.drone.camera_tilt - int(angular_error), self.drone.camera_pan)
                         # Orientate towards the robot
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
-                        print("Requested vector: {0:.4f}, {1:.2f}\n\n".format(self.vision.groundRobotOrientation, self.vision.groundRobotDistance))
+
+                        # Publish target
+                        # target = Twist()
+                        # target.linear.x    = self.vision.groundRobotDistance
+                        # target.angular.z   = self.vision.groundRobotOrientation
+
+                        # self.target_pub.publish(target)
 
                     if self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
-                        print("Requested vector: {0:.4f}, {1:.2f}\n\n".format(self.vision.groundRobotOrientation, self.vision.groundRobotDistance))
+                        
+                        # Publish target
+                        target = Twist()
+                        target.linear.x    = self.vision.groundRobotDistance
+                        target.angular.z   = self.vision.groundRobotOrientation
+
+                        self.target_pub.publish(target)
+
+                self.intent_pub.publish(UInt8(self.intent))
+                self.battery_status_pub.publish(UInt8(self.drone.battery))
             
             self.drone.process()
             # End of Autonomy

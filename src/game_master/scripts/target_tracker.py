@@ -295,7 +295,7 @@ class GoalTracker:
         Adjust drone swipe
         '''
         error = self.drone.yaw - self.swipeTarget
-        turn = -0.2
+        turn = -0.1
         if self.swipeStarted:
             if abs(error) > 0.2:
                 self.drone.turn(turn)
