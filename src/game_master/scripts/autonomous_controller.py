@@ -44,6 +44,9 @@ class AutonomousController:
     INTENT_FIND_GROUND_ROBOT    = 2
     INTENT_DIRECT_GROUND_ROBOT  = 3
     INTENT_RETURN_TO_BASE       = 4
+    INTENT_RETURNING_TO_BASE    = 5
+    INTENT_PREPARE_TO_LAND      = 6
+    INTENT_LAND                 = 7
 
     def __init__(self):
 
@@ -189,11 +192,36 @@ class AutonomousController:
         print("preparing to land\n\n")
         self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
 
+    # >>> Visibility checks >>>
+
     def site_in_view(self):
         return self.drone.vehicleFound and self.drone.siteAngle is not None
 
-    def wait_for_reading(self):
+    def east_in_view(self):
+        return self.vision.eastGateVisible and self.vision.eastGateAngle is not None
+
+    def north_in_view(self):
+        return self.vision.northGateVisible and self.vision.northGateAngle is not None
+
+    def landing_in_view(self):
+        return self.vision.landingPadisible and self.vision.landingPadAngle is not None
+
+    # <<< End Visibility checks <<<
+
+    def wait_and_navigate_to_north(self):
+        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_north)
+
+    def wait_and_navigate_to_east(self):
+        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_east)
+
+    def wait_and_navigate_to_site(self):
         self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_site)
+
+    def navigate_to_north(self):
+        pass
+
+    def navigate_to_east(self):
+        pass
 
     def take_a_photo(self):
         home = expanduser("~")
@@ -299,10 +327,9 @@ class AutonomousController:
                         self.goalTracker.reset()
                         self.site_found = True
                         self.intent = self.INTENT_NAVIGATE_TO_SITE
-                        #Just go up don't care about callback
-                        self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_for_reading)
+                        self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_and_navigate_to_site)
 
-                    if self.intent == self.INTENT_FIND_GROUND_ROBOT and self.vision.groundRobotVisible:
+                    elif self.intent == self.INTENT_FIND_GROUND_ROBOT and self.vision.groundRobotVisible:
                         print("Ground Vehicle Found\n\n")
                         self.goalTracker.reset()
                         self.intent = self.INTENT_DIRECT_GROUND_ROBOT
@@ -313,21 +340,30 @@ class AutonomousController:
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
 
                         # Publish target
+                        target = Twist()
+                        target.linear.x    = self.vision.groundRobotDistance
+                        target.angular.z   = self.vision.groundRobotOrientation
+
+                        self.target_pub.publish(target)
+
+                    elif self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
+                        self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
+                        
+                        # Publish target
                         # target = Twist()
                         # target.linear.x    = self.vision.groundRobotDistance
                         # target.angular.z   = self.vision.groundRobotOrientation
 
                         # self.target_pub.publish(target)
 
-                    if self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
-                        self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
+                    elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
+                        self.intent = self.INTENT_RETURNING_TO_BASE
+                        if self.vision.eastFrameDistance > self.vision.northFrameDistance:
+                            self.goalTracker.setOrientationTarget(self.vision.northGateAngle, False, self.wait_and_navigate_to_north)
+                        else:
+                            self.goalTracker.setOrientationTarget(self.vision.eastGateAngle, False, self.wait_and_navigate_to_east)
                         
-                        # Publish target
-                        target = Twist()
-                        target.linear.x    = self.vision.groundRobotDistance
-                        target.angular.z   = self.vision.groundRobotOrientation
 
-                        self.target_pub.publish(target)
 
                 self.intent_pub.publish(UInt8(self.intent))
                 self.battery_status_pub.publish(UInt8(self.drone.battery))

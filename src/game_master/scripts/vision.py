@@ -41,24 +41,28 @@ class DroneVision:
         self.groundRobotDistance    = None
         self.groundRobotAngle       = None
         self.groundFramePosition    = None
+        self.groundFrameDistance    = None
         # East gate
         self.eastGateVisible        = False
         self.eastGateOrientation    = None
         self.eastGateDistance       = None
         self.eastGateAngle          = None
         self.eastFramePosition      = None
+        self.eastFrameDistance      = None
         # North gate
         self.northGateVisible       = False
         self.northGateOrientation   = None
         self.northGateDistance      = None
         self.northGateAngle         = None
         self.northFramePosition     = None
+        self.northFrameDistance     = None
         # Landing pad
         self.landingPadVisible      = False
         self.landingPadOrientation  = None
         self.landingPadDistance     = None
         self.landingPadAngle        = None
         self.landingFramePosition   = None
+        self.landingFrameDistance   = None
         # New frame flag
         self.newFrameProcessed      = False
         self.processLine            = True
@@ -116,12 +120,13 @@ class DroneVision:
                     droneCentre = np.array([width/2, height])
 
                     # v1 = np.array(markerFront) - np.array(markerCentre)
-                    # v2 = np.array(droneCentre) - np.array(markerCentre)
+                    v2 = np.array(droneCentre) - np.array(markerCentre)
 
                     markerOrientation   = self.angle_between(markerFront, markerCentre, droneCentre)
                     mPhi                = (self.vertical_fov/2) - (((height - markerCentre[1]) / height) * self.vertical_fov)
                     mAngle              = np.radians(90 - (mPhi - theta - zeta))
                     markerDistance      = self.drone.altitude * np.tan(mAngle)
+                    markerFrameDistance = np.linalg.norm(v2)
 
                     if ids[i][0] == self.RED_VEHICLE_MARKER_ID:
                         vehicle_found           = True
@@ -137,24 +142,28 @@ class DroneVision:
                         self.groundRobotDistance    = markerDistance
                         self.groundRobotOrientation = markerOrientation
                         self.groundFramePosition    = markerCentre
+                        self.groundFrameDistance    = markerFrameDistance
                     elif ids[i][0] == self.EAST_ENTRANCE_MARKER_ID:
                         self.eastGateVisible        = True
                         self.eastGateAngle          = self.drone.yaw - np.radians(markerAngleDeg)
                         self.eastGateDistance       = markerDistance
                         self.eastGateOrientation    = markerOrientation
                         self.eastFramePosition      = markerCentre
+                        self.eastFrameDistance      = markerFrameDistance
                     elif ids[i][0] == self.NORTH_ENTRANCE_MARKER_ID:
                         self.northGateVisible       = True
                         self.northGateAngle         = self.drone.yaw - np.radians(markerAngleDeg)
                         self.northGateDistance      = markerDistance
                         self.northGateOrientation   = markerOrientation
                         self.northFramePosition     = markerCentre
+                        self.northFrameDistance     = markerFrameDistance
                     elif ids[i][0] == self.LANDING_PAD_MARKER_ID:
                         self.landingPadVisible      = True
                         self.landingPadAngle        = self.drone.yaw - np.radians(markerAngleDeg)
                         self.landingPadDistance     = markerDistance
                         self.landingPadOrientation  = markerOrientation
                         self.landingFramePosition   = markerCentre
+                        self.landingFrameDistance   = markerFrameDistance
 
             site_found = False
             accident_site_angle = None
