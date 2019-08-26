@@ -186,6 +186,7 @@ class AutonomousController:
 
     def swipe_the_ground(self):
         print("Will swipe the ground\n\n")
+        self.drone.cameraControl(-40, 0)
         self.goalTracker.setSwipeTarget(self.measure_distance)
 
     def prepare_to_land(self):
@@ -240,7 +241,7 @@ class AutonomousController:
         print("On Accident site\n\n")
         self.take_a_photo()
         self.intent = self.INTENT_FIND_GROUND_ROBOT
-        self.drone.cameraControl(-20, 0)
+        self.drone.cameraControl(-40, 0)
         print("Looking for ground robot\n\n")
         self.goalTracker.setHeightTarget(1.5, False)
         self.goalTracker.setSwipeTarget(self.keep_swiping_ground)
