@@ -200,6 +200,9 @@ class AutonomousController:
     # <<< End Visibility checks <<<
 
     # >>> Navigate to north entry >>>
+    def look_for_landing_gate(self):
+        pass
+
     def wait_and_navigate_to_north(self):
         self.goalTracker.setValueTarget(self.north_in_view, self.navigate_to_north)
 
@@ -261,7 +264,26 @@ class AutonomousController:
         self.goalTracker.setValueTarget(self.landing_in_view, self.navigate_to_landing)
 
     def navigate_to_landing(self):
-        pass
+        print("Traveling to Landing\n\n")
+        # Adjust camera position
+        angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.landingFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
+        self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
+        self.goalTracker.setPointTarget(self.get_landing_target, False, self.drone.land)
+
+    def get_landing_target(self):
+        if self.vision.landingFramePosition is not None:
+            self.lastKnownLandingPosition = self.vision.landingFramePosition
+            self.frameKnownLandingValidity = 0
+        else:
+            # Only allow last known possition for next 3 frames
+            self.frameKnownLandingValidity += 1
+            if self.frameKnownLandingValidity > 3:
+                self.lastKnownLandingPosition = None
+
+        if self.lastKnownLandingPosition is not None:
+            return np.array(self.lastKnownLandingPosition), np.array([self.vision.width/2, self.vision.height/2])
+        else:
+            return None, np.array([self.vision.width/2, self.vision.height/2])
     # <<< End navigate to landing <<<
 
     # >>> Navigate to accident site >>>
