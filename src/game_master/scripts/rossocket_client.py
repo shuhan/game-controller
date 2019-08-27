@@ -8,7 +8,7 @@ from geometry_msgs.msg import Twist
 
 class RosProxySocketClient:
 
-    def __init__(self, host='144.32.145.213', port=50008):
+    def __init__(self, host='144.32.145.223', port=50008):
 
         rospy.init_node('rosproxy_socket_client')
 
