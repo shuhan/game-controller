@@ -20,13 +20,14 @@ class RosProxySocketClient:
         self.target_sub             = rospy.Subscriber('/drone/target', Twist, self.target_received, queue_size=1)
         self.intent_sub             = rospy.Subscriber('/drone/intent', UInt8, self.intent_received, queue_size=1)
         self.landrobot_visual_pub   = rospy.Publisher('/landrobot/object_found', String, queue_size=1)
+        self.buffer                 = ""
 
     def battery_status_received(self, data):
         if self.socket != None:
             try:
                 cmd = "battery_status,{0}".format(data.data)
                 print(cmd)
-                self.socket.send(cmd)
+                self.socket.send(cmd + "\n")
             except socket.error:
                 print("Unable to pass battery status, connection error")
         else:
@@ -37,7 +38,7 @@ class RosProxySocketClient:
             try:
                 cmd = "target,{0:.2f},{1:.6f}".format(data.linear.x, data.angular.z)
                 print(cmd)
-                self.socket.send(cmd)
+                self.socket.send(cmd + "\n")
             except socket.error:
                 print("Unable to pass target, connection error")
         else:
@@ -48,7 +49,7 @@ class RosProxySocketClient:
             try:
                 cmd = "intent,{0}".format(data.data)
                 print(cmd)
-                self.socket.send(cmd)
+                self.socket.send(cmd + "\n")
             except socket.error:
                 print("Unable to pass intent, connection error")
         else:
@@ -74,16 +75,24 @@ class RosProxySocketClient:
             sys.exit(1)
         
         while not rospy.is_shutdown():
-            self.socket.send("ping")
-            data = self.socket.recv(1024)
-            cmd = data.split(',')
+            self.socket.send("ping" + "\n")
+            data = self.socket.recv(64)
+                
+            self.buffer += data
+            lines = self.buffer.split('\n')
+            self.buffer = lines[-1]
 
-            if cmd[0] == "recieved":
-                pass
-            elif cmd[0] == "object_found":
-                self.landrobot_visual_pub.publish(String(cmd[1]))
-            else:
-                print("Unknown command: {0}".format(data))
+            for i in range(len(lines) - 1):
+
+                line = lines[i]
+                cmd = line.split(',')
+
+                if cmd[0] == "recieved":
+                    pass
+                elif cmd[0] == "object_found":
+                    self.landrobot_visual_pub.publish(String(cmd[1]))
+                else:
+                    print("Unknown command: {0}".format(line))
         
         self.socket.close()
 

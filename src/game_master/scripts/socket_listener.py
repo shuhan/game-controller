@@ -20,11 +20,12 @@ class RosProxySocketListener:
         self.socket                 = None
         self.conn                   = None
         self.rate                   = rospy.Rate(100)
+        self.buffer                 = ""
     
     def landrobot_found_object(self, data):
         if self.conn != None:
             try:
-                self.conn.send("object_found,{0}".format(data.data))
+                self.conn.send("object_found,{0}".format(data.data) + "\n")
             except socket.error:
                 print("Unable to pass object found message, connection error")
         else:
@@ -58,29 +59,37 @@ class RosProxySocketListener:
             print('Connected by {0}'.format(addr))
             # Deal with one connection at a time
             while not rospy.is_shutdown():
-                data = self.conn.recv(1024)
+                data = self.conn.recv(64)
                 if not data: break
-                cmd = data.split(',')
+                
+                self.buffer += data
+                lines = self.buffer.split('\n')
+                self.buffer = lines[-1]
 
-                if cmd[0] == "ping":
-                    pass
-                elif cmd[0] == "battery_status":
-                    self.battery_status_pub.publish(UInt8(cmd[1]))
-                elif cmd[0] == "intent":
-                    self.intent_pub.publish(UInt8(cmd[1]))
-                elif cmd[0] == "target":
-                    if len(cmd) != 3:
-                        print("Invalid command: {0}".format(data))
-                    target = Twist()
-                    target.linear.x    = float(cmd[1])
-                    target.angular.z   = float(cmd[2])
-                    self.target_pub.publish(target)
-                else:
-                    print("Unknown command: {0}".format(data))
+                for i in range(len(lines) - 1):
 
-                self.conn.send("recieved")
+                    line = lines[i]
+                    cmd = line.split(',')
 
-                self.rate.sleep()
+                    if cmd[0] == "ping":
+                        pass
+                    elif cmd[0] == "battery_status":
+                        self.battery_status_pub.publish(UInt8(cmd[1]))
+                    elif cmd[0] == "intent":
+                        self.intent_pub.publish(UInt8(cmd[1]))
+                    elif cmd[0] == "target":
+                        if len(cmd) != 3:
+                            print("Invalid command: {0}".format(line))
+                        target = Twist()
+                        target.linear.x    = float(cmd[1])
+                        target.angular.z   = float(cmd[2])
+                        self.target_pub.publish(target)
+                    else:
+                        print("Unknown command: {0}".format(line))
+
+                    self.conn.send("recieved" + "\n")
+                    self.conn.flush()
+                    self.rate.sleep()
             
             self.conn.close()
             self.conn = None
