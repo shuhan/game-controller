@@ -78,6 +78,8 @@ class AutonomousController:
         self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
 
+    # >>> Manual control >>>
+
     def print_help(self):
         # Upcoming Controller
         # print('Control:')
@@ -120,25 +122,13 @@ class AutonomousController:
     def navigate(self):
         
         if self.char == 'w':                # Forward
-            if self.inMiddle:
-                self.targetWall     = self.rightYaw
-            else:
-                self.drone.forward()
+            self.drone.forward()
         elif self.char == 's':              # Reverse
-            if self.inMiddle:
-                self.targetWall     = self.leftYaw
-            else:
-                self.drone.reverse()
+            self.drone.reverse()
         elif self.char == 'a':              # Left
-            if self.inMiddle:
-                self.targetWall     = self.frontYaw
-            else:
-                self.drone.left()
+            self.drone.left()
         elif self.char == 'd':              # Right
-            if self.inMiddle:
-                self.targetWall     = self.backYaw
-            else:
-                self.drone.right()
+            self.drone.right()
         elif self.char == 'q':              # YAW Left
             self.drone.yawLeft()
         elif self.char == 'e':              # YAW Right
@@ -157,6 +147,8 @@ class AutonomousController:
             self.drone.cameraPanLeft()
         if self.char == '6':
             self.drone.cameraPanRight()
+
+    # <<< End manual control <<<
 
     def taken_off(self):
         print("Adjusted height\n\n")
@@ -194,7 +186,6 @@ class AutonomousController:
         self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
 
     # >>> Visibility checks >>>
-
     def site_in_view(self):
         return self.drone.vehicleFound and self.drone.siteAngle is not None
 
@@ -206,55 +197,65 @@ class AutonomousController:
 
     def landing_in_view(self):
         return self.vision.landingPadisible and self.vision.landingPadAngle is not None
-
     # <<< End Visibility checks <<<
 
+    # >>> Navigate to north entry >>>
     def wait_and_navigate_to_north(self):
-        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_north)
-
-    def wait_and_navigate_to_east(self):
-        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_east)
-
-    def wait_and_navigate_to_site(self):
-        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_site)
+        self.goalTracker.setValueTarget(self.north_in_view, self.navigate_to_north)
 
     def navigate_to_north(self):
         pass
+    # <<< End navigate to north entry <<<
+
+    # >>> Navigate to east entry >>>
+    def wait_and_navigate_to_east(self):
+        self.goalTracker.setValueTarget(self.east_in_view, self.navigate_to_east)
 
     def navigate_to_east(self):
         pass
+    # <<< End navigate to east entry <<<
 
-    def take_a_photo(self):
-        home = expanduser("~")
-        image_path  = os.path.join(home, "accident_site.png")
-        cv2.imwrite(image_path, self.drone.frame)
+    # >>> Navigate to landing >>>
+    def wait_and_navigate_to_landing(self):
+        self.goalTracker.setValueTarget(self.landing_in_view, self.navigate_to_landing)
+
+    def navigate_to_landing(self):
+        pass
+    # <<< End navigate to landing <<<
+
+    # >>> Navigate to accident site >>>
+    def wait_and_navigate_to_site(self):
+        self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_site)
 
     def navigate_to_site(self):
         print("Traveling to Accident site\n\n")
         # Adjust camera position
         angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.drone.siteFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
         self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
-        self.goalTracker.setPointTarget(self.get_point_target, False, self.target_in_window)
+        self.goalTracker.setPointTarget(self.get_accident_site_target, False, self.accident_site_in_window)
 
-    def target_in_window(self):
+    def accident_site_in_window(self):
         self.goalTracker.reset()
         print("On Accident site\n\n")
-        self.take_a_photo()
+        self.take_a_photo("accident_site")
         self.intent = self.INTENT_FIND_GROUND_ROBOT
         self.drone.cameraControl(-40, 0)
         print("Looking for ground robot\n\n")
         self.goalTracker.setHeightTarget(1.5, False)
-        self.goalTracker.setSwipeTarget(self.keep_swiping_ground)
+        self.goalTracker.setSwipeTarget(self.look_for_ground_robot)
 
-    def keep_swiping_ground(self):
+    def look_for_ground_robot(self):
         self.groundSwipeCount += 1
 
         if self.groundSwipeCount < 3:
-            self.goalTracker.setSwipeTarget(self.keep_swiping_ground)
+            self.goalTracker.setSwipeTarget(self.look_for_ground_robot)
         else:
+            '''
+            ToDo: May be return to base??
+            '''
             print("Couldn't find ground robot\n\n")
 
-    def get_point_target(self):
+    def get_accident_site_target(self):
         if self.drone.siteFramePosition is not None:
             self.lastKnownPosition = self.drone.siteFramePosition
             self.frameKnownValidity = 0
@@ -274,6 +275,12 @@ class AutonomousController:
             '''
             # self.drone.cameraControl(self.drone.camera_tilt - random.randint(-2, 5), self.drone.camera_pan)
             return None, np.array([self.vision.width/2, self.vision.height/2])
+    # <<< End navigate to accident site <<<
+
+    def take_a_photo(self, name):
+        home = expanduser("~")
+        image_path  = os.path.join(home, name + ".png")
+        cv2.imwrite(image_path, self.drone.frame)
 
     def measure_distance(self):
 
