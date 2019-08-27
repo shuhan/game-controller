@@ -88,7 +88,6 @@ class RosProxySocketListener:
                         print("Unknown command: {0}".format(line))
 
                     self.conn.send("recieved" + "\n")
-                    self.conn.flush()
                     self.rate.sleep()
             
             self.conn.close()
