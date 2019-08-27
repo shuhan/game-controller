@@ -74,9 +74,9 @@ class RosProxySocketListener:
                     if cmd[0] == "ping":
                         pass
                     elif cmd[0] == "battery_status":
-                        self.battery_status_pub.publish(UInt8(cmd[1]))
+                        self.battery_status_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "intent":
-                        self.intent_pub.publish(UInt8(cmd[1]))
+                        self.intent_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "target":
                         if len(cmd) != 3:
                             print("Invalid command: {0}".format(line))
