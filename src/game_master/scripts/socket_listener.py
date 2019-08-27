@@ -59,7 +59,7 @@ class RosProxySocketListener:
             print('Connected by {0}'.format(addr))
             # Deal with one connection at a time
             while not rospy.is_shutdown():
-                data = self.conn.recv(64)
+                data = self.conn.recv(1)
                 if not data: break
                 
                 self.buffer += data
@@ -68,7 +68,11 @@ class RosProxySocketListener:
 
                 for i in range(len(lines) - 1):
 
-                    line = lines[i]
+                    line = lines[i].strip()
+
+                    if not line:
+                        continue
+
                     cmd = line.split(',')
 
                     if cmd[0] == "ping":

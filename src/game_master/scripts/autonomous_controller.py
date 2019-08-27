@@ -421,11 +421,11 @@ class AutonomousController:
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
                         
                         # Publish target
-                        # target = Twist()
-                        # target.linear.x    = self.vision.groundRobotDistance
-                        # target.angular.z   = self.vision.groundRobotOrientation
+                        target = Twist()
+                        target.linear.x    = self.vision.groundRobotDistance
+                        target.angular.z   = self.vision.groundRobotOrientation
 
-                        # self.target_pub.publish(target)
+                        self.target_pub.publish(target)
 
                     elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
                         self.intent = self.INTENT_RETURNING_TO_BASE

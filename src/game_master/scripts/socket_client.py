@@ -76,15 +76,18 @@ class RosProxySocketClient:
         
         while not rospy.is_shutdown():
             self.socket.send("ping" + "\n")
-            data = self.socket.recv(64)
+            data = self.socket.recv(1)
                 
             self.buffer += data
             lines = self.buffer.split('\n')
             self.buffer = lines[-1]
 
             for i in range(len(lines) - 1):
+                line = lines[i].strip()
 
-                line = lines[i]
+                if not line:
+                    continue
+                    
                 cmd = line.split(',')
 
                 if cmd[0] == "recieved":
