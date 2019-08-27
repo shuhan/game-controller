@@ -62,7 +62,9 @@ class RosProxySocketListener:
                 if not data: break
                 cmd = data.split(',')
 
-                if cmd[0] == "battery_status":
+                if cmd[0] == "ping":
+                    pass
+                elif cmd[0] == "battery_status":
                     self.battery_status_pub.publish(UInt8(cmd[1]))
                 elif cmd[0] == "intent":
                     self.intent_pub.publish(UInt8(cmd[1]))
@@ -77,6 +79,7 @@ class RosProxySocketListener:
                     print("Unknown command: {0}".format(data))
 
                 self.conn.send("recieved")
+
                 self.rate.sleep()
             
             self.conn.close()
@@ -84,4 +87,7 @@ class RosProxySocketListener:
 
 
 if __name__ == "__main__":
-    RosProxySocketListener().start()
+    try:
+        RosProxySocketListener().start()
+    except rospy.ROSInterruptException:
+        pass

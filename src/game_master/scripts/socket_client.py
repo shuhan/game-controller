@@ -8,14 +8,14 @@ from geometry_msgs.msg import Twist
 
 class RosProxySocketClient:
 
-    def __init__(self, host='144.32.145.213', port=50008):
+    def __init__(self, host='144.32.145.223', port=50008):
 
         rospy.init_node('rosproxy_socket_client')
 
         self.host                   = host
         self.port                   = port
         self.socket                 = None
-        self.rate                   = rospy.Rate(100)
+        self.rate                   = rospy.Rate(10)
         self.battery_status_sub     = rospy.Subscriber('/drone/battery_status', UInt8, self.battery_status_received, queue_size=1)
         self.target_sub             = rospy.Subscriber('/drone/target', Twist, self.target_received, queue_size=1)
         self.intent_sub             = rospy.Subscriber('/drone/intent', UInt8, self.intent_received, queue_size=1)
@@ -24,7 +24,9 @@ class RosProxySocketClient:
     def battery_status_received(self, data):
         if self.socket != None:
             try:
-                self.socket.send("battery_status,{0}".format(data.data))
+                cmd = "battery_status,{0}".format(data.data)
+                print(cmd)
+                self.socket.send(cmd)
             except socket.error:
                 print("Unable to pass battery status, connection error")
         else:
@@ -33,7 +35,9 @@ class RosProxySocketClient:
     def target_received(self, data):
         if self.socket != None:
             try:
-                self.socket.send("target,{0:.2f},{1:.6f}".format(data.linear.x, data.angular.z))
+                cmd = "target,{0:.2f},{1:.6f}".format(data.linear.x, data.angular.z)
+                print(cmd)
+                self.socket.send(cmd)
             except socket.error:
                 print("Unable to pass target, connection error")
         else:
@@ -42,7 +46,9 @@ class RosProxySocketClient:
     def intent_received(self, data):
         if self.socket != None:
             try:
-                self.socket.send("intent,{0}".format(data.data))
+                cmd = "intent,{0}".format(data.data)
+                print(cmd)
+                self.socket.send(cmd)
             except socket.error:
                 print("Unable to pass intent, connection error")
         else:
@@ -68,6 +74,7 @@ class RosProxySocketClient:
             sys.exit(1)
         
         while not rospy.is_shutdown():
+            self.socket.send("ping")
             data = self.socket.recv(1024)
             cmd = data.split(',')
 
@@ -79,3 +86,9 @@ class RosProxySocketClient:
                 print("Unknown command: {0}".format(data))
         
         self.socket.close()
+
+if __name__ == "__main__":
+    try:
+        RosProxySocketClient().connect()
+    except rospy.ROSInterruptException:
+        pass
