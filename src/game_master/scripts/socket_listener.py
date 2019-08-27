@@ -56,43 +56,53 @@ class RosProxySocketListener:
 
         while not rospy.is_shutdown():
             self.conn, addr = self.socket.accept()
+            self.conn.setblocking(0)
             print('Connected by {0}'.format(addr))
             # Deal with one connection at a time
             while not rospy.is_shutdown():
-                data = self.conn.recv(1)
-                if not data: break
+                data = None
+            
+                try:
+                    data = self.conn.recv(1)
+                except socket.timeout:
+                    self.rate.sleep()
+                except socket.error as ex:
+                    if ex.errno == 11:
+                        self.rate.sleep()
+                    else:
+                        print(ex)
+                        break
+                except Exception:
+                    self.conn.close()
+                    break
+
+                if not data: continue
                 
-                self.buffer += data
-                lines = self.buffer.split('\n')
-                self.buffer = lines[-1]
+                if data == '\n':
+                    cmd = self.buffer.split(',')
 
-                for i in range(len(lines) - 1):
-
-                    line = lines[i].strip()
-
-                    if not line:
-                        continue
-
-                    cmd = line.split(',')
-
-                    if cmd[0] == "ping":
-                        pass
-                    elif cmd[0] == "battery_status":
+                    if cmd[0] == "battery_status":
+                        print(cmd)
+                        print(cmd[0])
+                        print(cmd[1])
                         self.battery_status_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "intent":
                         self.intent_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "target":
                         if len(cmd) != 3:
-                            print("Invalid command: {0}".format(line))
+                            print("Invalid command: {0}".format(self.buffer))
                         target = Twist()
                         target.linear.x    = float(cmd[1])
                         target.angular.z   = float(cmd[2])
                         self.target_pub.publish(target)
                     else:
-                        print("Unknown command: {0}".format(line))
+                        print("Unknown command: {0}".format(self.buffer))
+
+                    self.buffer = ''
 
                     self.conn.send("recieved" + "\n")
-                    self.rate.sleep()
+                else:
+                    self.buffer += data
             
             self.conn.close()
             self.conn = None
