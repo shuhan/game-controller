@@ -79,7 +79,6 @@ class AutonomousController:
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
 
     # >>> Manual control >>>
-
     def print_help(self):
         # Upcoming Controller
         # print('Control:')
@@ -147,9 +146,9 @@ class AutonomousController:
             self.drone.cameraPanLeft()
         if self.char == '6':
             self.drone.cameraPanRight()
-
     # <<< End manual control <<<
 
+    # >>> Autonomouse control routines : Explore >>>
     def taken_off(self):
         print("Adjusted height\n\n")
         self.goalTracker.setVisualOrientationTarget(VisualMeasurement.NORTH, self.intial_orientate)
@@ -184,6 +183,7 @@ class AutonomousController:
     def prepare_to_land(self):
         print("preparing to land\n\n")
         self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
+    # <<< End autonomouse control routines : Explore <<<
 
     # >>> Visibility checks >>>
     def site_in_view(self):
@@ -204,7 +204,26 @@ class AutonomousController:
         self.goalTracker.setValueTarget(self.north_in_view, self.navigate_to_north)
 
     def navigate_to_north(self):
-        pass
+        print("Traveling to North Gate\n\n")
+        # Adjust camera position
+        angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.northFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
+        self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
+        self.goalTracker.setPointTarget(self.get_north_gate_target, False, self.look_for_landing_pad)
+
+    def get_north_gate_target(self):
+        if self.vision.northFramePosition is not None:
+            self.lastKnownNorthPosition = self.vision.northFramePosition
+            self.frameKnownNorthValidity = 0
+        else:
+            # Only allow last known possition for next 3 frames
+            self.frameKnownNorthValidity += 1
+            if self.frameKnownNorthValidity > 3:
+                self.lastKnownNorthPosition = None
+
+        if self.lastKnownNorthPosition is not None:
+            return np.array(self.lastKnownNorthPosition), np.array([self.vision.width/2, self.vision.height/2])
+        else:
+            return None, np.array([self.vision.width/2, self.vision.height/2])
     # <<< End navigate to north entry <<<
 
     # >>> Navigate to east entry >>>
@@ -212,10 +231,32 @@ class AutonomousController:
         self.goalTracker.setValueTarget(self.east_in_view, self.navigate_to_east)
 
     def navigate_to_east(self):
-        pass
+        print("Traveling to East Gate\n\n")
+        # Adjust camera position
+        angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.eastFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
+        self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
+        self.goalTracker.setPointTarget(self.get_east_gate_target, False, self.look_for_landing_pad)
+
+    def get_east_gate_target(self):
+        if self.vision.eastFramePosition is not None:
+            self.lastKnownEastPosition = self.vision.eastFramePosition
+            self.frameKnownEastValidity = 0
+        else:
+            # Only allow last known possition for next 3 frames
+            self.frameKnownEastValidity += 1
+            if self.frameKnownEastValidity > 3:
+                self.lastKnownEastPosition = None
+
+        if self.lastKnownEastPosition is not None:
+            return np.array(self.lastKnownEastPosition), np.array([self.vision.width/2, self.vision.height/2])
+        else:
+            return None, np.array([self.vision.width/2, self.vision.height/2])
     # <<< End navigate to east entry <<<
 
     # >>> Navigate to landing >>>
+    def look_for_landing_pad(self):
+        pass
+
     def wait_and_navigate_to_landing(self):
         self.goalTracker.setValueTarget(self.landing_in_view, self.navigate_to_landing)
 
