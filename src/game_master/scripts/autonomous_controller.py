@@ -400,22 +400,45 @@ class AutonomousController:
                         self.intent = self.INTENT_NAVIGATE_TO_SITE
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_and_navigate_to_site)
 
-                    elif self.intent == self.INTENT_FIND_GROUND_ROBOT and self.vision.groundRobotVisible:
-                        print("Ground Vehicle Found\n\n")
-                        self.goalTracker.reset()
-                        self.intent = self.INTENT_DIRECT_GROUND_ROBOT
-                        # Adjust camera position
-                        angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.groundFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
-                        self.drone.cameraControl(self.drone.camera_tilt - int(angular_error), self.drone.camera_pan)
-                        # Orientate towards the robot
-                        self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
+                    elif self.intent == self.INTENT_FIND_GROUND_ROBOT:
+                        if self.vision.groundRobotVisible:
+                            print("Ground Vehicle Found\n\n")
+                            self.goalTracker.reset()
+                            self.intent = self.INTENT_DIRECT_GROUND_ROBOT
+                            # Adjust camera position
+                            angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.groundFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
+                            self.drone.cameraControl(self.drone.camera_tilt - int(angular_error), self.drone.camera_pan)
+                            # Orientate towards the robot
+                            self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
 
-                        # Publish target
-                        target = Twist()
-                        target.linear.x    = self.vision.groundRobotDistance
-                        target.angular.z   = self.vision.groundRobotOrientation
+                            # Publish target
+                            target = Twist()
+                            target.linear.x    = self.vision.groundRobotDistance
+                            target.linear.y    = 0
+                            target.angular.z   = self.vision.groundRobotOrientation
 
-                        self.target_pub.publish(target)
+                            self.target_pub.publish(target)
+                        elif self.vision.eastGateVisible:   # Supporting possition based on east gate
+                            target = Twist()
+                            target.linear.x    = self.vision.eastGateDistance
+                            target.linear.y    = 1
+                            target.angular.z   = self.vision.eastGateOrientation
+
+                            self.target_pub.publish(target)
+                        elif self.vision.northGateVisible:   # Supporting possition based on north gate
+                            target = Twist()
+                            target.linear.x    = self.vision.northGateDistance
+                            target.linear.y    = 2
+                            target.angular.z   = self.vision.northGateOrientation
+
+                            self.target_pub.publish(target)
+                        elif self.vision.landingPadVisible:   # Supporting possition based on landing pad
+                            target = Twist()
+                            target.linear.x    = self.vision.landingPadDistance
+                            target.linear.y    = 3
+                            target.angular.z   = self.vision.landingPadOrientation
+
+                            self.target_pub.publish(target)
 
                     elif self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
                         self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
