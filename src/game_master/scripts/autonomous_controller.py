@@ -175,6 +175,7 @@ class AutonomousController:
         self.vision.expectedDistance = self.drone.guideDistance
         self.goalTracker.setDistanceTarget(3, False, self.swipe_the_ground)
 
+    # ToDo: We might have to convert it like other search swipe routines
     def swipe_the_ground(self):
         print("Will swipe the ground\n\n")
         self.drone.cameraControl(-40, 0)
@@ -199,9 +200,36 @@ class AutonomousController:
         return self.vision.landingPadisible and self.vision.landingPadAngle is not None
     # <<< End Visibility checks <<<
 
+    def begin_search_swipe(self, func):
+        '''
+        This will reset ground Swipe count and run the given search function, func shall be one of
+            >>> look_for_ground_robot
+            >>> look_for_landing_gate
+            >>> look_for_landing_pad
+        Each of the seach function does almost the same swipe action however, they may have slightly different camera control
+        '''
+        self.groundSwipeCount = 0
+        if callable(func): func()
+
     # >>> Navigate to north entry >>>
     def look_for_landing_gate(self):
-        pass
+
+        if self.groundSwipeCount == 0:
+            self.drone.cameraControl(-15, 0)
+        elif self.groundSwipeCount == 1:
+            self.drone.cameraControl(-30, 0)
+        elif self.groundSwipeCount == 2:
+            self.drone.cameraControl(-50, 0)
+
+        if self.groundSwipeCount < 3:
+            self.goalTracker.setSwipeTarget(self.look_for_landing_gate)
+        else:
+            '''
+            ToDo: May be land??
+            '''
+            print("Couldn't find landing gate\n\n")
+        
+        self.groundSwipeCount += 1
 
     def wait_and_navigate_to_north(self):
         self.goalTracker.setValueTarget(self.north_in_view, self.navigate_to_north)
@@ -211,7 +239,7 @@ class AutonomousController:
         # Adjust camera position
         angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.northFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
         self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
-        self.goalTracker.setPointTarget(self.get_north_gate_target, False, self.look_for_landing_pad)
+        self.goalTracker.setPointTarget(self.get_north_gate_target, False, self.drone.land) # ToDo: look for landing pad
 
     def get_north_gate_target(self):
         if self.vision.northFramePosition is not None:
@@ -238,7 +266,7 @@ class AutonomousController:
         # Adjust camera position
         angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.eastFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
         self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
-        self.goalTracker.setPointTarget(self.get_east_gate_target, False, self.look_for_landing_pad)
+        self.goalTracker.setPointTarget(self.get_east_gate_target, False, self.drone.land) # ToDo: look for landing pad
 
     def get_east_gate_target(self):
         if self.vision.eastFramePosition is not None:
@@ -257,8 +285,27 @@ class AutonomousController:
     # <<< End navigate to east entry <<<
 
     # >>> Navigate to landing >>>
+    def begin_look_for_landing_pad(self):
+        self.begin_search_swipe(self.look_for_landing_pad)
+
     def look_for_landing_pad(self):
-        pass
+
+        if self.groundSwipeCount == 0:
+            self.drone.cameraControl(-50, 0)
+        elif self.groundSwipeCount == 1:
+            self.drone.cameraControl(-40, 0)
+        elif self.groundSwipeCount == 2:
+            self.drone.cameraControl(-30, 0)
+
+        if self.groundSwipeCount < 3:
+            self.goalTracker.setSwipeTarget(self.look_for_landing_pad)
+        else:
+            '''
+            ToDo: May be land??
+            '''
+            print("Couldn't find landing pad\n\n")
+        
+        self.groundSwipeCount += 1
 
     def wait_and_navigate_to_landing(self):
         self.goalTracker.setValueTarget(self.landing_in_view, self.navigate_to_landing)
@@ -301,14 +348,25 @@ class AutonomousController:
         self.goalTracker.reset()
         print("On Accident site\n\n")
         self.take_a_photo("accident_site")
-        self.intent = self.INTENT_FIND_GROUND_ROBOT
-        self.drone.cameraControl(-40, 0)
-        print("Looking for ground robot\n\n")
+
+        # self.intent = self.INTENT_FIND_GROUND_ROBOT
+        # print("Looking for ground robot\n\n")
+        # self.goalTracker.setHeightTarget(1.5, False)
+        # self.begin_search_swipe(self.look_for_ground_robot)
+
+        self.intent = self.INTENT_RETURN_TO_BASE
+        print("Looking for gate\n\n")
         self.goalTracker.setHeightTarget(1.5, False)
-        self.goalTracker.setSwipeTarget(self.look_for_ground_robot)
+        self.begin_search_swipe(self.look_for_landing_gate)
 
     def look_for_ground_robot(self):
-        self.groundSwipeCount += 1
+
+        if self.groundSwipeCount == 0:
+            self.drone.cameraControl(-50, 0)
+        elif self.groundSwipeCount == 1:
+            self.drone.cameraControl(-30, 0)
+        elif self.groundSwipeCount == 2:
+            self.drone.cameraControl(-20, 0)
 
         if self.groundSwipeCount < 3:
             self.goalTracker.setSwipeTarget(self.look_for_ground_robot)
@@ -317,6 +375,8 @@ class AutonomousController:
             ToDo: May be return to base??
             '''
             print("Couldn't find ground robot\n\n")
+        
+        self.groundSwipeCount += 1
 
     def get_accident_site_target(self):
         if self.drone.siteFramePosition is not None:
@@ -401,7 +461,7 @@ class AutonomousController:
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_and_navigate_to_site)
 
                     elif self.intent == self.INTENT_FIND_GROUND_ROBOT:
-                        if self.vision.groundRobotVisible:
+                        if self.vision.groundRobotVisible:  # Vehicle found, send vector from vehicle
                             print("Ground Vehicle Found\n\n")
                             self.goalTracker.reset()
                             self.intent = self.INTENT_DIRECT_GROUND_ROBOT
