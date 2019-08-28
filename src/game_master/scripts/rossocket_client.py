@@ -36,7 +36,7 @@ class RosProxySocketClient:
     def target_received(self, data):
         if self.socket != None:
             try:
-                cmd = "target,{0:.2f},{1:.6f}".format(data.linear.x, data.angular.z)
+                cmd = "target,{0:.2f},{1},{2:.6f}".format(data.linear.x, data.linear.y, data.angular.z)
                 print(cmd)
                 self.socket.send(cmd + "\n")
             except socket.error:

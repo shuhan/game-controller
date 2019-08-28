@@ -89,11 +89,12 @@ class RosProxySocketListener:
                     elif cmd[0] == "intent":
                         self.intent_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "target":
-                        if len(cmd) != 3:
+                        if len(cmd) != 4:
                             print("Invalid command: {0}".format(self.buffer))
                         target = Twist()
-                        target.linear.x    = float(cmd[1])
-                        target.angular.z   = float(cmd[2])
+                        target.linear.x     = float(cmd[1])
+                        target.linear.y     = int(cmd[2])
+                        target.angular.z    = float(cmd[3])
                         self.target_pub.publish(target)
                     else:
                         print("Unknown command: {0}".format(self.buffer))
