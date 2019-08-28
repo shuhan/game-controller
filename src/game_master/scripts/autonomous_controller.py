@@ -83,7 +83,9 @@ class AutonomousController:
         self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
 
-    # >>> Manual control >>>
+    #-----------------------------------------------------------------------
+    # Manual control
+    #-----------------------------------------------------------------------
     def print_help(self):
         # Upcoming Controller
         # print('Control:')
@@ -151,9 +153,41 @@ class AutonomousController:
             self.drone.cameraPanLeft()
         if self.char == '6':
             self.drone.cameraPanRight()
-    # <<< End manual control <<<
+    #-----------------------------------------------------------------------
+    # End manual control
+    #-----------------------------------------------------------------------
 
-    # >>> Autonomouse control routines : Explore >>>
+    #-----------------------------------------------------------------------
+    # Common Functions
+    #-----------------------------------------------------------------------
+    def begin_search_swipe(self, func, height):
+        '''
+        This will reset ground Swipe count and run the given search function, func shall be one of
+            >>> look_for_ground_robot
+            >>> look_for_landing_gate
+            >>> look_for_landing_pad
+        Each of the seach function does almost the same swipe action however, they may have slightly different camera control
+        '''
+        self.groundSwipeCount = 0
+        if callable(func):
+            self.goalTracker.setHeightTarget(height, False, func)
+    
+    def take_a_photo(self, name):
+        home = expanduser("~")
+        image_path  = os.path.join(home, name + ".png")
+        cv2.imwrite(image_path, self.drone.frame)
+
+    def return_to_base(self):
+        self.intent = self.INTENT_RETURN_TO_BASE
+        print("Looking for gate\n\n")
+        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
+    #-----------------------------------------------------------------------
+    # End Common Functions
+    #-----------------------------------------------------------------------
+
+    #-----------------------------------------------------------------------
+    # Autonomouse control routines : Explore
+    #-----------------------------------------------------------------------
     def taken_off(self):
         print("Adjusted height\n\n")
         self.goalTracker.setVisualOrientationTarget(VisualMeasurement.NORTH, self.intial_orientate)
@@ -178,21 +212,40 @@ class AutonomousController:
     def turned_on_right(self):
         print("Turned towards right\n\n")
         self.vision.expectedDistance = self.drone.guideDistance
-        self.goalTracker.setDistanceTarget(3, False, self.swipe_the_ground)
+        self.goalTracker.setDistanceTarget(3, False, self.begin_look_for_accident_site)
 
-    # ToDo: We might have to convert it like other search swipe routines
-    def swipe_the_ground(self):
-        print("Will swipe the ground\n\n")
-        self.drone.cameraControl(-40, 0)
-        self.goalTracker.setSwipeTarget(self.measure_distance)
+    def begin_look_for_accident_site(self):
+        self.begin_search_swipe(self.look_for_accident_site, self.LANDING_HEIGHT)
+
+    def look_for_accident_site(self):
+        if self.groundSwipeCount == 0:
+            print("Searching for accident site...")
+            self.drone.cameraControl(-40, 0)    # Mid range
+        elif self.groundSwipeCount == 1:
+            self.drone.cameraControl(-60, 0)    # Close range
+        elif self.groundSwipeCount == 2:
+            self.drone.cameraControl(-20, 0)    # Long range
+
+        if self.groundSwipeCount < 3:
+            self.goalTracker.setSwipeTarget(self.look_for_accident_site)
+        else:
+            print("Couldn't find accident site\n\n")
+            # Just return to base
+            self.return_to_base()
+            
+        self.groundSwipeCount += 1
 
     def prepare_to_land(self):
         print("preparing to land\n\n")
         self.intent = self.INTENT_LAND
         self.goalTracker.setHeightTarget(self.LANDING_HEIGHT, False, self.drone.land)
-    # <<< End autonomouse control routines : Explore <<<
+    #-----------------------------------------------------------------------
+    # End autonomouse control routines : Explore
+    #-----------------------------------------------------------------------
 
-    # >>> Visibility checks >>>
+    #-----------------------------------------------------------------------
+    # Visibility checks
+    #-----------------------------------------------------------------------
     def site_in_view(self):
         return self.drone.vehicleFound and self.drone.siteAngle is not None
 
@@ -204,24 +257,17 @@ class AutonomousController:
 
     def landing_in_view(self):
         return self.vision.landingPadVisible and self.vision.landingPadAngle is not None
-    # <<< End Visibility checks <<<
+    #-----------------------------------------------------------------------
+    # End Visibility checks
+    #-----------------------------------------------------------------------
 
-    def begin_search_swipe(self, func, height):
-        '''
-        This will reset ground Swipe count and run the given search function, func shall be one of
-            >>> look_for_ground_robot
-            >>> look_for_landing_gate
-            >>> look_for_landing_pad
-        Each of the seach function does almost the same swipe action however, they may have slightly different camera control
-        '''
-        self.groundSwipeCount = 0
-        if callable(func):
-            self.goalTracker.setHeightTarget(height, False, func)
-
-    # >>> Navigate to north entry >>>
+    #-----------------------------------------------------------------------
+    # Navigate to north entry
+    #-----------------------------------------------------------------------
     def look_for_landing_gate(self):
 
         if self.groundSwipeCount == 0:
+            print("Searching for landing gate...")
             self.drone.cameraControl(-15, 0)
         elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-30, 0)
@@ -231,10 +277,9 @@ class AutonomousController:
         if self.groundSwipeCount < 3:
             self.goalTracker.setSwipeTarget(self.look_for_landing_gate)
         else:
-            '''
-            ToDo: May be land??
-            '''
             print("Couldn't find landing gate\n\n")
+            # If gate marker isn't visible it's safe to just land where you are
+            self.drone.land()
         
         self.groundSwipeCount += 1
 
@@ -262,9 +307,13 @@ class AutonomousController:
             return np.array(self.lastKnownNorthPosition), np.array([self.vision.width/2, self.vision.height/2])
         else:
             return None, np.array([self.vision.width/2, self.vision.height/2])
-    # <<< End navigate to north entry <<<
+    #-----------------------------------------------------------------------
+    # End navigate to north entry
+    #-----------------------------------------------------------------------
 
-    # >>> Navigate to east entry >>>
+    #-----------------------------------------------------------------------
+    # Navigate to east entry
+    #-----------------------------------------------------------------------
     def wait_and_navigate_to_east(self):
         self.goalTracker.setValueTarget(self.east_in_view, self.navigate_to_east)
 
@@ -289,9 +338,13 @@ class AutonomousController:
             return np.array(self.lastKnownEastPosition), np.array([self.vision.width/2, self.vision.height/2])
         else:
             return None, np.array([self.vision.width/2, self.vision.height/2])
-    # <<< End navigate to east entry <<<
+    #-----------------------------------------------------------------------
+    # End navigate to east entry
+    #-----------------------------------------------------------------------
 
-    # >>> Navigate to landing >>>
+    #-----------------------------------------------------------------------
+    # Navigate to landing
+    #-----------------------------------------------------------------------
     def begin_look_for_landing_pad(self):
         self.intent = self.INTENT_FIND_LANDING_PAD
         self.begin_search_swipe(self.look_for_landing_pad, self.LANDING_HEIGHT)
@@ -308,10 +361,9 @@ class AutonomousController:
         if self.groundSwipeCount < 3:
             self.goalTracker.setSwipeTarget(self.look_for_landing_pad)
         else:
-            '''
-            ToDo: May be land??
-            '''
             print("Couldn't find landing pad\n\n")
+            # If landing pad isn't visible, it's safe to land where the drone is
+            self.drone.land()
         
         self.groundSwipeCount += 1
 
@@ -342,9 +394,13 @@ class AutonomousController:
             return np.array(self.lastKnownLandingPosition), np.array([self.vision.width/2, self.vision.height/2])
         else:
             return None, np.array([self.vision.width/2, self.vision.height/2])
-    # <<< End navigate to landing <<<
+    #-----------------------------------------------------------------------
+    # End navigate to landing
+    #-----------------------------------------------------------------------
 
-    # >>> Navigate to accident site >>>
+    #-----------------------------------------------------------------------
+    # Navigate to accident site
+    #-----------------------------------------------------------------------
     def wait_and_navigate_to_site(self):
         self.goalTracker.setValueTarget(self.site_in_view, self.navigate_to_site)
 
@@ -376,10 +432,9 @@ class AutonomousController:
         if self.groundSwipeCount < 3:
             self.goalTracker.setSwipeTarget(self.look_for_ground_robot)
         else:
-            '''
-            ToDo: May be return to base??
-            '''
             print("Couldn't find ground robot\n\n")
+            # Just return to base
+            self.return_to_base()
         
         self.groundSwipeCount += 1
 
@@ -403,33 +458,9 @@ class AutonomousController:
             '''
             # self.drone.cameraControl(self.drone.camera_tilt - random.randint(-2, 5), self.drone.camera_pan)
             return None, np.array([self.vision.width/2, self.vision.height/2])
-    # <<< End navigate to accident site <<<
-
-    def take_a_photo(self, name):
-        home = expanduser("~")
-        image_path  = os.path.join(home, name + ".png")
-        cv2.imwrite(image_path, self.drone.frame)
-
-    def measure_distance(self):
-
-        if self.site_found:
-            self.siteDistance = self.drone.siteDistance
-            self.siteAngle  = self.drone.siteAngle
-
-        print("Measuring distance\n\n")
-        self.visualScale.getFastLocation(self.get_location)
-
-    def get_location(self, x, y):
-        print("Location is: {0:.2f}, {1:.2f}\n\n".format(x, y))
-
-        if self.site_found:
-            angularDistance = self.goalTracker.getAngularError(self.siteAngle, self.visualScale.southWall)
-            siteX = x - (self.siteDistance * np.cos(angularDistance))
-            siteY = y + (self.siteDistance * np.sin(angularDistance))
-            print("Site Location is: {0:.2f}, {1:.2f}\n\n".format(siteX, siteY))
-            print("Site distance: {0:.2f} and angle {1}\n\n".format(self.siteDistance, np.degrees(self.siteAngle)))
-
-        self.drone.land()
+    #-----------------------------------------------------------------------
+    # End navigate to accident site
+    #-----------------------------------------------------------------------
 
     def run(self):
         self.print_help()
@@ -515,9 +546,7 @@ class AutonomousController:
 
                         # self.target_pub.publish(target)
 
-                        self.intent = self.INTENT_RETURN_TO_BASE
-                        print("Looking for gate\n\n")
-                        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
+                        self.return_to_base()
 
                     elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
                         # first cancle all previous targets
@@ -550,7 +579,6 @@ class AutonomousController:
                         self.drone.cameraControl(0, 0)
                         self.vision.expectedDistance    = 6.50
                         self.intent                     = self.INTENT_FIND_THE_SITE
-
 
                 self.intent_pub.publish(UInt8(self.intent))
                 self.battery_status_pub.publish(UInt8(self.drone.battery))
