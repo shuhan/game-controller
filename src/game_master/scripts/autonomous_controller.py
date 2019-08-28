@@ -231,9 +231,9 @@ class AutonomousController:
     def look_for_accident_site(self):
         if self.groundSwipeCount == 0:
             print("Searching for accident site...")
-            self.drone.cameraControl(-40, 0)    # Mid range
+            self.drone.cameraControl(-30, 0)    # Mid range
         elif self.groundSwipeCount == 1:
-            self.drone.cameraControl(-60, 0)    # Close range
+            self.drone.cameraControl(-50, 0)    # Close range
         elif self.groundSwipeCount == 2:
             self.drone.cameraControl(-20, 0)    # Long range
 
