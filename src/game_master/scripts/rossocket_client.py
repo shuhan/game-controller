@@ -20,6 +20,7 @@ class RosProxySocketClient:
         self.target_sub             = rospy.Subscriber('/drone/target', Twist, self.target_received, queue_size=1)
         self.intent_sub             = rospy.Subscriber('/drone/intent', UInt8, self.intent_received, queue_size=1)
         self.landrobot_visual_pub   = rospy.Publisher('/landrobot/object_found', String, queue_size=1)
+        self.control_sub            = rospy.Publisher('/drone/go', Empty, queue_size=1)
         self.buffer                 = ""
 
     def battery_status_received(self, data):
@@ -102,6 +103,8 @@ class RosProxySocketClient:
                     pass
                 elif cmd[0] == "object_found":
                     self.landrobot_visual_pub.publish(String(cmd[1]))
+                elif cmd[0] == "go":
+                    self.control_sub.publish()
                 else:
                     print("Unknown command: {0}".format(self.buffer))
 

@@ -15,6 +15,7 @@ class RosProxySocketListener:
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
         self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
+        self.control_sub            = rospy.Subscriber('/drone/go', Empty, self.lets_play, queue_size=1)
         self.host                   = None # Bind with all interfaces
         self.port                   = port
         self.socket                 = None
@@ -30,6 +31,15 @@ class RosProxySocketListener:
                 print("Unable to pass object found message, connection error")
         else:
             print("Unable to pass object found message, not connected")
+
+    def lets_play(self, data):
+        if self.conn != None:
+            try:
+                self.conn.send("go\n")
+            except socket.error:
+                print("Unable to pass go message, connection error")
+        else:
+            print("Unable to pass go message, not connected")
 
     def start(self):
         for res in socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC,

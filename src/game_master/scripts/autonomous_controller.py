@@ -66,13 +66,9 @@ class AutonomousController:
         self.drone.frame_callback   = self.vision.calculateFrontalDistance
         self.rate                   = rospy.Rate(100)
         self.status_init            = True
+        self.site_found             = False
         self.directionFixed         = False
         self.goodFound              = False
-        self.frontYaw               = 0
-        self.rightYaw               = 0
-        self.leftYaw                = 0
-        self.backYaw                = 0
-        self.targetWall             = 0
         self.autonomous             = False
         self.groundSwipeCount       = 0
         self.intent                 = self.INTENT_FIND_THE_SITE
@@ -82,6 +78,7 @@ class AutonomousController:
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
         self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
+        self.control_sub            = rospy.Subscriber('/drone/go', Empty, self.lets_play, queue_size=1)
 
     #-----------------------------------------------------------------------
     # Manual control
@@ -98,10 +95,7 @@ class AutonomousController:
             sys.stdout.write("\033[F") # Cursor up one line
         else:
             self.status_init = False
-        print("Speed {0} Altitude {1:.2f} Tilt {2} Battery {3}% Status {4} Back Yaw {5:.2f}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.battery, self.drone.getStateStr(), self.backYaw))
-
-    def landrobot_found_object(self, data):
-        pass
+        print("Speed {0} Altitude {1:.2f} Tilt {2} Battery {3}% Status {4} Auto pilot {5}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.battery, self.drone.getStateStr(), "Yes" if self.autonomous else "No"))
 
     def adjust_speed(self):
         if self.char == '+':
@@ -160,6 +154,19 @@ class AutonomousController:
     #-----------------------------------------------------------------------
     # Common Functions
     #-----------------------------------------------------------------------
+    def lets_play(self):
+        if self.drone.state == self.drone.FLIGHT_STATE_NOT_FLYING or self.drone.state == self.drone.FLIGHT_STATE_UNKNOWN:
+            self.drone.cameraControl(0, 0)
+            self.directionFixed = False
+            self.goodFound  = False
+            self.inMiddle   = False
+            self.drone.takeoff()
+            self.autonomous = True
+
+    def landrobot_found_object(self, data):
+        print("Ground robot found the accident site\n\n")
+        self.return_to_base()
+
     def begin_search_swipe(self, func, height):
         '''
         This will reset ground Swipe count and run the given search function, func shall be one of
@@ -178,9 +185,11 @@ class AutonomousController:
         cv2.imwrite(image_path, self.drone.frame)
 
     def return_to_base(self):
-        self.intent = self.INTENT_RETURN_TO_BASE
-        print("Looking for gate\n\n")
-        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
+        # if drone is in any early phase
+        if self.intent < self.INTENT_RETURN_TO_BASE:
+            self.intent = self.INTENT_RETURN_TO_BASE
+            print("Looking for gate\n\n")
+            self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
     #-----------------------------------------------------------------------
     # End Common Functions
     #-----------------------------------------------------------------------
@@ -465,8 +474,6 @@ class AutonomousController:
     def run(self):
         self.print_help()
 
-        self.site_found = False
-
         self.goalTracker.setHeightTarget(self.TAKE_OFF_HEIGHT, False, self.taken_off)
 
         while not rospy.is_shutdown():
@@ -575,10 +582,17 @@ class AutonomousController:
                         self.goalTracker.setOrientationTarget(self.vision.landingPadAngle, False, self.wait_and_navigate_to_landing)
 
                     elif self.intent == self.INTENT_LAND and self.drone.state == self.drone.FLIGHT_STATE_NOT_FLYING:
-                        # Just reset parameters
+                        # Just reset parameters & Prepare the drone to launch again
                         self.drone.cameraControl(0, 0)
                         self.vision.expectedDistance    = 6.50
                         self.intent                     = self.INTENT_FIND_THE_SITE
+                        self.site_found                 = False
+                        self.directionFixed             = False
+                        self.goodFound                  = False
+                        self.groundRobotFound           = False
+                        self.autonomous                 = False
+                        # Set the initial goal back (Won't be processed as robot is not in autonomous mode)
+                        self.goalTracker.setHeightTarget(self.TAKE_OFF_HEIGHT, False, self.taken_off)
 
                 self.intent_pub.publish(UInt8(self.intent))
                 self.battery_status_pub.publish(UInt8(self.drone.battery))
