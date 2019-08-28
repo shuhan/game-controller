@@ -52,6 +52,7 @@ class AutonomousController:
     SEARCH_HEIGHT               = 1.5
     TAKE_OFF_HEIGHT             = 1.3
     LANDING_HEIGHT              = 1.0
+    MIN_BATTERY_LEVEL           = 15
 
     def __init__(self):
 
@@ -73,6 +74,7 @@ class AutonomousController:
         self.groundSwipeCount       = 0
         self.intent                 = self.INTENT_FIND_THE_SITE
         self.groundRobotFound       = False
+        self.landingGateTarget      = None
 
         self.battery_status_pub     = rospy.Publisher('/drone/battery_status', UInt8, queue_size=1)
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
@@ -95,7 +97,7 @@ class AutonomousController:
             sys.stdout.write("\033[F") # Cursor up one line
         else:
             self.status_init = False
-        print("Speed {0} Altitude {1:.2f} Tilt {2} Battery {3}% Status {4} Auto pilot {5}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.battery, self.drone.getStateStr(), "Yes" if self.autonomous else "No"))
+        print("Speed {0} Altitude {1:.2f} Tilt {2} Battery {3}% Status {4} Auto pilot {5}".format(self.drone.movement_speed, self.drone.altitude, self.drone.camera_tilt, self.drone.battery, self.drone.getStateStr(), "Yes" if self.autonomous else "No "))
 
     def adjust_speed(self):
         if self.char == '+':
@@ -154,7 +156,7 @@ class AutonomousController:
     #-----------------------------------------------------------------------
     # Common Functions
     #-----------------------------------------------------------------------
-    def lets_play(self):
+    def lets_play(self, data):
         if self.drone.state == self.drone.FLIGHT_STATE_NOT_FLYING or self.drone.state == self.drone.FLIGHT_STATE_UNKNOWN:
             self.drone.cameraControl(0, 0)
             self.directionFixed = False
@@ -293,6 +295,7 @@ class AutonomousController:
         self.groundSwipeCount += 1
 
     def wait_and_navigate_to_north(self):
+        self.landingGateTarget = 'north'
         self.goalTracker.setValueTarget(self.north_in_view, self.navigate_to_north)
 
     def navigate_to_north(self):
@@ -324,6 +327,7 @@ class AutonomousController:
     # Navigate to east entry
     #-----------------------------------------------------------------------
     def wait_and_navigate_to_east(self):
+        self.landingGateTarget = 'east'
         self.goalTracker.setValueTarget(self.east_in_view, self.navigate_to_east)
 
     def navigate_to_east(self):
@@ -360,6 +364,11 @@ class AutonomousController:
 
     def look_for_landing_pad(self):
 
+        swipeSpeed = -0.1
+
+        if self.landingGateTarget == 'north':
+            swipeSpeed = 0.1
+
         if self.groundSwipeCount == 0:
             self.drone.cameraControl(-30, 0)
         elif self.groundSwipeCount == 1:
@@ -368,7 +377,7 @@ class AutonomousController:
             self.drone.cameraControl(-20, 0)
 
         if self.groundSwipeCount < 3:
-            self.goalTracker.setSwipeTarget(self.look_for_landing_pad)
+            self.goalTracker.setSwipeTarget(self.look_for_landing_pad, swipeSpeed)
         else:
             print("Couldn't find landing pad\n\n")
             # If landing pad isn't visible, it's safe to land where the drone is
@@ -491,6 +500,11 @@ class AutonomousController:
                 if self.drone.state == self.drone.FLIGHT_STATE_MANOEUVRING or self.drone.state == self.drone.FLIGHT_STATE_HOVERING:
 
                     self.goalTracker.process()
+                    
+                    # Battery low
+                    if self.drone.battery < self.MIN_BATTERY_LEVEL and self.intent < self.INTENT_RETURN_TO_BASE:
+                        print("Battery low\n\n")
+                        self.return_to_base()
 
                     if self.intent == self.INTENT_FIND_THE_SITE and self.drone.vehicleFound and self.drone.siteAngle is not None and not self.site_found:
                         # Turn off line processing

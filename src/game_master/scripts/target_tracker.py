@@ -124,13 +124,14 @@ class GoalTracker:
         self.distanceAchived    = False
         self.distanceCallback   = None
 
-    def setSwipeTarget(self, callback=None):
+    def setSwipeTarget(self, callback=None, swipeSpeed=-0.1):
         self.resetOrientationTarget()
         self.resetVisualOrientationTarget()
         self.enableSwipe        = True
         self.swipeStarted       = False
         self.doneSwipe          = False
         self.swipeTarget        = self.drone.yaw
+        self.swipeSpeed         = swipeSpeed
         self.swipeCallback      = callback
 
     def resetSwipeTarget(self):
@@ -138,6 +139,7 @@ class GoalTracker:
         self.swipeStarted       = False
         self.doneSwipe          = False
         self.swipeTarget        = 0
+        self.swipeSpeed         = 0
         self.swipeCallback      = None
 
     def reset(self):
@@ -296,10 +298,10 @@ class GoalTracker:
         Adjust drone swipe
         '''
         error = self.drone.yaw - self.swipeTarget
-        turn = -0.1
+        
         if self.swipeStarted:
             if abs(error) > 0.2:
-                self.drone.turn(turn)
+                self.drone.turn(self.swipeSpeed)
             else:
                 if not self.doneSwipe:
                     self.doneSwipe = True
@@ -311,7 +313,7 @@ class GoalTracker:
             if abs(error) > 0.5:
                 self.swipeStarted = True
             
-            self.drone.turn(turn)
+            self.drone.turn(self.swipeSpeed)
             
         return self.doneSwipe
 
