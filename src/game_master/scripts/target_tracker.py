@@ -186,33 +186,34 @@ class GoalTracker:
         errorVector                 = self.getPointError(currentPoint, targetPoint)
         errorMagnitude              = np.linalg.norm(errorVector)
 
-        #Lets try to set a 200 pixel error max we can make it configureable
-        if errorMagnitude > 200 or self.drone.camera_tilt > -70:
+        #Lets try to set a 150 pixel error max we can make it configureable
+        if errorMagnitude > 100 or self.drone.camera_tilt > -70:
             
-            if errorVector[1] > 0:
-                signX = errorVector[1]/abs(errorVector[1])
-                moveX = signX * min([0.02, abs(errorVector[1])])
-                self.drone.moveX(moveX)
-            else:
-                if self.drone.camera_tilt > -70:
-                    if self.lastTiltChanged > 10:
-                        print(targetPoint)
-                        print(currentPoint)
-                        print(errorVector)
-                        print("Looking further down\n\n")
-                        self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
-                        self.lastTiltChanged = 0
-                    else:
-                        self.lastTiltChanged += 1
-
-            if abs(errorVector[0]) > 10:
+            if abs(errorVector[0]) > 40:
                 signY = (errorVector[0]/abs(errorVector[0]))
                 moveY = signY * min([0.05, abs(errorVector[0])])
                 #self.drone.moveY(moveY)
                 self.drone.turn(moveY)
+            else:   # Lets control the angle and forward seperately
+                if errorVector[1] > 0:
+                    signX = errorVector[1]/abs(errorVector[1])
+                    moveX = signX * min([0.06, abs(errorVector[1])])
+                    self.drone.moveX(moveX)
+                else:
+                    if self.drone.camera_tilt > -70:
+                        if self.lastTiltChanged > 10:
+                            # print(targetPoint)
+                            # print(currentPoint)
+                            # print(errorVector)
+                            # print("Looking further down\n\n")
+                            self.drone.cameraControl(self.drone.camera_tilt - 5, self.drone.camera_pan)
+                            self.lastTiltChanged = 0
+                        else:
+                            self.lastTiltChanged += 1
 
         else:
             if not self.pointAchived:
+                print("Point target achived\n\n")
                 self.pointAchived = True
                 if callable(self.pointCallback):
                     self.pointCallback()

@@ -34,7 +34,7 @@ class DroneVision:
         self.frameTime              = 0
         self.width                  = 0
         self.height                 = 0
-        self.pi         = np.radians(180)
+        self.pi                     = np.radians(180)
         # Ground robot detection parameters
         self.groundRobotVisible     = False
         self.groundRobotOrientation = None

@@ -163,7 +163,7 @@ class BebopDrone:
                 if self.frame_skip == 0 or seq % self.frame_skip == 0:
                     frameTime = float(data.header.stamp.secs + float(data.header.stamp.nsecs) / 1e9)
                     self.frame_callback(self.frame, frameTime)
-            cv2.imshow('Bebop', img)
+            # cv2.imshow('Bebop', img)
             cv2.waitKey(1)
         except CvBridgeError as e:
             print(e)

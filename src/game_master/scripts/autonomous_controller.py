@@ -45,8 +45,13 @@ class AutonomousController:
     INTENT_DIRECT_GROUND_ROBOT  = 3
     INTENT_RETURN_TO_BASE       = 4
     INTENT_RETURNING_TO_BASE    = 5
-    INTENT_PREPARE_TO_LAND      = 6
-    INTENT_LAND                 = 7
+    INTENT_FIND_LANDING_PAD     = 6
+    INTENT_PREPARE_TO_LAND      = 7
+    INTENT_LAND                 = 8
+
+    SEARCH_HEIGHT               = 1.5
+    TAKE_OFF_HEIGHT             = 1.3
+    LANDING_HEIGHT              = 1.0
 
     def __init__(self):
 
@@ -162,7 +167,7 @@ class AutonomousController:
         self.goalTracker.setDistanceTarget(3, False, self.moved_in_middle)
 
     def go_up_high(self):
-        self.goalTracker.setHeightTarget(1.7, False, self.moved_in_middle)
+        self.goalTracker.setHeightTarget(self.SEARCH_HEIGHT, False, self.moved_in_middle)
 
     def moved_in_middle(self):
         # Now turn right
@@ -183,7 +188,8 @@ class AutonomousController:
 
     def prepare_to_land(self):
         print("preparing to land\n\n")
-        self.goalTracker.setHeightTarget(1.0, False, self.measure_distance)
+        self.intent = self.INTENT_LAND
+        self.goalTracker.setHeightTarget(self.LANDING_HEIGHT, False, self.drone.land)
     # <<< End autonomouse control routines : Explore <<<
 
     # >>> Visibility checks >>>
@@ -197,10 +203,10 @@ class AutonomousController:
         return self.vision.northGateVisible and self.vision.northGateAngle is not None
 
     def landing_in_view(self):
-        return self.vision.landingPadisible and self.vision.landingPadAngle is not None
+        return self.vision.landingPadVisible and self.vision.landingPadAngle is not None
     # <<< End Visibility checks <<<
 
-    def begin_search_swipe(self, func):
+    def begin_search_swipe(self, func, height):
         '''
         This will reset ground Swipe count and run the given search function, func shall be one of
             >>> look_for_ground_robot
@@ -209,7 +215,8 @@ class AutonomousController:
         Each of the seach function does almost the same swipe action however, they may have slightly different camera control
         '''
         self.groundSwipeCount = 0
-        if callable(func): func()
+        if callable(func):
+            self.goalTracker.setHeightTarget(height, False, func)
 
     # >>> Navigate to north entry >>>
     def look_for_landing_gate(self):
@@ -239,10 +246,10 @@ class AutonomousController:
         # Adjust camera position
         angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.northFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
         self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
-        self.goalTracker.setPointTarget(self.get_north_gate_target, False, self.drone.land) # ToDo: look for landing pad
+        self.goalTracker.setPointTarget(self.get_north_gate_target, False, self.begin_look_for_landing_pad)
 
     def get_north_gate_target(self):
-        if self.vision.northFramePosition is not None:
+        if self.vision.northGateVisible:
             self.lastKnownNorthPosition = self.vision.northFramePosition
             self.frameKnownNorthValidity = 0
         else:
@@ -266,10 +273,10 @@ class AutonomousController:
         # Adjust camera position
         angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.eastFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
         self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
-        self.goalTracker.setPointTarget(self.get_east_gate_target, False, self.drone.land) # ToDo: look for landing pad
+        self.goalTracker.setPointTarget(self.get_east_gate_target, False, self.begin_look_for_landing_pad)
 
     def get_east_gate_target(self):
-        if self.vision.eastFramePosition is not None:
+        if self.vision.eastGateVisible:
             self.lastKnownEastPosition = self.vision.eastFramePosition
             self.frameKnownEastValidity = 0
         else:
@@ -286,16 +293,17 @@ class AutonomousController:
 
     # >>> Navigate to landing >>>
     def begin_look_for_landing_pad(self):
-        self.begin_search_swipe(self.look_for_landing_pad)
+        self.intent = self.INTENT_FIND_LANDING_PAD
+        self.begin_search_swipe(self.look_for_landing_pad, self.LANDING_HEIGHT)
 
     def look_for_landing_pad(self):
 
         if self.groundSwipeCount == 0:
-            self.drone.cameraControl(-50, 0)
+            self.drone.cameraControl(-30, 0)
         elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-40, 0)
         elif self.groundSwipeCount == 2:
-            self.drone.cameraControl(-30, 0)
+            self.drone.cameraControl(-20, 0)
 
         if self.groundSwipeCount < 3:
             self.goalTracker.setSwipeTarget(self.look_for_landing_pad)
@@ -315,10 +323,13 @@ class AutonomousController:
         # Adjust camera position
         angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.landingFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
         self.drone.cameraControl(self.drone.camera_tilt - angular_error, self.drone.camera_pan)
-        self.goalTracker.setPointTarget(self.get_landing_target, False, self.drone.land)
+        self.goalTracker.setPointTarget(self.get_landing_target, False, self.face_north_and_land)
+
+    def face_north_and_land(self):
+        self.goalTracker.setOrientationTarget(self.visualScale.northWall, False, self.prepare_to_land)
 
     def get_landing_target(self):
-        if self.vision.landingFramePosition is not None:
+        if self.vision.landingPadVisible:
             self.lastKnownLandingPosition = self.vision.landingFramePosition
             self.frameKnownLandingValidity = 0
         else:
@@ -351,13 +362,11 @@ class AutonomousController:
 
         # self.intent = self.INTENT_FIND_GROUND_ROBOT
         # print("Looking for ground robot\n\n")
-        # self.goalTracker.setHeightTarget(1.5, False)
-        # self.begin_search_swipe(self.look_for_ground_robot)
+        # self.begin_search_swipe(self.look_for_ground_robot, self.SEARCH_HEIGHT)
 
         self.intent = self.INTENT_RETURN_TO_BASE
         print("Looking for gate\n\n")
-        self.goalTracker.setHeightTarget(1.5, False)
-        self.begin_search_swipe(self.look_for_landing_gate)
+        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
 
     def look_for_ground_robot(self):
 
@@ -431,7 +440,7 @@ class AutonomousController:
 
         self.site_found = False
 
-        self.goalTracker.setHeightTarget(1.3, False, self.taken_off)
+        self.goalTracker.setHeightTarget(self.TAKE_OFF_HEIGHT, False, self.taken_off)
 
         while not rospy.is_shutdown():
             self.rate.sleep()
@@ -511,12 +520,36 @@ class AutonomousController:
                         # self.target_pub.publish(target)
 
                     elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
+                        # first cancle all previous targets
+                        self.goalTracker.reset()
                         self.intent = self.INTENT_RETURNING_TO_BASE
-                        if self.vision.eastFrameDistance > self.vision.northFrameDistance:
+                        
+                        if not self.vision.eastGateVisible:
+                            print("Navigating to north gate\n\n")
+                            self.goalTracker.setOrientationTarget(self.vision.northGateAngle, False, self.wait_and_navigate_to_north)
+                        elif not self.vision.northGateVisible:
+                            print("Navigating to east gate\n\n")
+                            self.goalTracker.setOrientationTarget(self.vision.eastGateAngle, False, self.wait_and_navigate_to_east)
+                        # Both gates are visible
+                        elif self.vision.eastFrameDistance > self.vision.northFrameDistance:
+                            print("Navigating to north gate\n\n")
                             self.goalTracker.setOrientationTarget(self.vision.northGateAngle, False, self.wait_and_navigate_to_north)
                         else:
+                            print("Navigating to east gate\n\n")
                             self.goalTracker.setOrientationTarget(self.vision.eastGateAngle, False, self.wait_and_navigate_to_east)
-                        
+
+                    elif self.intent == self.INTENT_FIND_LANDING_PAD and self.vision.landingPadVisible:
+                        self.goalTracker.reset()
+                        self.intent = self.INTENT_PREPARE_TO_LAND
+
+                        print("Navigating to landing page\n\n")
+                        self.goalTracker.setOrientationTarget(self.vision.landingPadAngle, False, self.wait_and_navigate_to_landing)
+
+                    elif self.intent == self.INTENT_LAND and self.drone.state == self.drone.FLIGHT_STATE_NOT_FLYING:
+                        # Just reset parameters
+                        self.drone.cameraControl(0, 0)
+                        self.vision.expectedDistance    = 6.50
+                        self.intent                     = self.INTENT_FIND_THE_SITE
 
 
                 self.intent_pub.publish(UInt8(self.intent))
