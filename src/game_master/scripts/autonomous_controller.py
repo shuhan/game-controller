@@ -360,13 +360,9 @@ class AutonomousController:
         print("On Accident site\n\n")
         self.take_a_photo("accident_site")
 
-        # self.intent = self.INTENT_FIND_GROUND_ROBOT
-        # print("Looking for ground robot\n\n")
-        # self.begin_search_swipe(self.look_for_ground_robot, self.SEARCH_HEIGHT)
-
-        self.intent = self.INTENT_RETURN_TO_BASE
-        print("Looking for gate\n\n")
-        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
+        self.intent = self.INTENT_FIND_GROUND_ROBOT
+        print("Looking for ground robot\n\n")
+        self.begin_search_swipe(self.look_for_ground_robot, self.SEARCH_HEIGHT)
 
     def look_for_ground_robot(self):
 
@@ -518,6 +514,10 @@ class AutonomousController:
                         # target.angular.z   = self.vision.groundRobotOrientation
 
                         # self.target_pub.publish(target)
+
+                        self.intent = self.INTENT_RETURN_TO_BASE
+                        print("Looking for gate\n\n")
+                        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
 
                     elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
                         # first cancle all previous targets
