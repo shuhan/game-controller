@@ -441,9 +441,9 @@ class AutonomousController:
     def look_for_ground_robot(self):
 
         if self.groundSwipeCount == 0:
-            self.drone.cameraControl(-50, 0)
-        elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-30, 0)
+        elif self.groundSwipeCount == 1:
+            self.drone.cameraControl(-50, 0)
         elif self.groundSwipeCount == 2:
             self.drone.cameraControl(-20, 0)
 
@@ -502,7 +502,7 @@ class AutonomousController:
                     self.goalTracker.process()
                     
                     # Battery low
-                    if self.drone.battery < self.MIN_BATTERY_LEVEL and self.intent < self.INTENT_RETURN_TO_BASE:
+                    if self.drone.battery > self.drone.battery and self.drone.battery < self.MIN_BATTERY_LEVEL and self.intent < self.INTENT_RETURN_TO_BASE:
                         print("Battery low\n\n")
                         self.return_to_base()
 
@@ -533,32 +533,29 @@ class AutonomousController:
                             target.linear.x    = self.vision.groundRobotDistance
                             target.linear.y    = 0
                             target.angular.z   = self.vision.groundRobotOrientation
-
                             self.target_pub.publish(target)
-                        elif self.vision.eastGateVisible:   # Supporting possition based on east gate
-                            target = Twist()
-                            target.linear.x    = self.vision.eastGateDistance
-                            target.linear.y    = 1
-                            target.angular.z   = self.vision.eastGateOrientation
-
-                            self.target_pub.publish(target)
-                        elif self.vision.northGateVisible:   # Supporting possition based on north gate
-                            target = Twist()
-                            target.linear.x    = self.vision.northGateDistance
-                            target.linear.y    = 2
-                            target.angular.z   = self.vision.northGateOrientation
-
-                            self.target_pub.publish(target)
-                        elif self.vision.landingPadVisible:   # Supporting possition based on landing pad
-                            target = Twist()
-                            target.linear.x    = self.vision.landingPadDistance
-                            target.linear.y    = 3
-                            target.angular.z   = self.vision.landingPadOrientation
-
-                            self.target_pub.publish(target)
+                        else:
+                            if self.vision.eastGateVisible:   # Supporting possition based on east gate
+                                target = Twist()
+                                target.linear.x    = self.vision.eastGateDistance
+                                target.linear.y    = 1
+                                target.angular.z   = self.vision.eastGateOrientation
+                                self.target_pub.publish(target)
+                            if self.vision.northGateVisible:   # Supporting possition based on north gate
+                                target = Twist()
+                                target.linear.x    = self.vision.northGateDistance
+                                target.linear.y    = 2
+                                target.angular.z   = self.vision.northGateOrientation
+                                self.target_pub.publish(target)
+                            if self.vision.landingPadVisible:   # Supporting possition based on landing pad
+                                target = Twist()
+                                target.linear.x    = self.vision.landingPadDistance
+                                target.linear.y    = 3
+                                target.angular.z   = self.vision.landingPadOrientation
+                                self.target_pub.publish(target)
 
                     elif self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
-                        self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
+                        # self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
                         
                         # Publish target
                         # target = Twist()
