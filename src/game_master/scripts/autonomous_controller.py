@@ -533,6 +533,9 @@ class AutonomousController:
                         self.intent = self.INTENT_NAVIGATE_TO_SITE
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_and_navigate_to_site)
                     elif self.intent == self.INTENT_FIND_THE_BEAR and self.vision.bearVisible and self.drone.siteFramePosition is not None:
+
+                        self.take_a_photo("mr.york_and_car")
+
                         self.intent = self.INTENT_FIND_GROUND_ROBOT
                         self.begin_look_for_ground_robot()
 
