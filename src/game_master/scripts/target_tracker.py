@@ -173,7 +173,7 @@ class GoalTracker:
         self.resetVisualOrientationTarget()
 
     def getAngularError(self, currentOrientation, targetOrientation):
-        error = self.drone.yaw - self.orientationTarget
+        error = currentOrientation - targetOrientation
         if abs(error) > self.pi:
             sign = error/abs(error)
             error = -1 * sign * (2*self.pi - abs(error))

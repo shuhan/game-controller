@@ -536,11 +536,9 @@ class AutonomousController:
                         self.intent = self.INTENT_FIND_GROUND_ROBOT
                         self.begin_look_for_ground_robot()
 
-                        bear_direction = "Not Found"
+                        bear_direction = "unknown"
 
                         y_diff = self.vision.bearFramePosition[1] - self.drone.siteFramePosition[1]
-
-                        bear_on_top = y_diff < 0
 
                         angularDistances = {
                             'east' : abs(self.goalTracker.getAngularError(self.drone.yaw, self.visualScale.eastWall)),
@@ -550,15 +548,17 @@ class AutonomousController:
                         }
 
                         droneHeading = min(angularDistances, key=angularDistances.get)
-                        
+
+                        print("Drone heading: {0} Y Diff: {1}\n\n".format(droneHeading, y_diff))
+
                         if droneHeading     == 'east':
-                            bear_direction = 'east' if bear_on_top else 'west'
+                            bear_direction = 'east' if y_diff < 0 else 'west'
                         elif droneHeading   == 'west':
-                            bear_direction = 'west' if bear_on_top else 'east'
+                            bear_direction = 'west' if y_diff < 0 else 'east'
                         elif droneHeading   == 'north':
-                            bear_direction = 'north' if bear_on_top else 'south'
+                            bear_direction = 'north' if y_diff < 0 else 'south'
                         elif droneHeading   == 'south':
-                            bear_direction = 'south' if bear_on_top else 'north'
+                            bear_direction = 'south' if y_diff < 0 else 'north'
 
                         self.bear_direction_pub.publish(String(bear_direction))
 

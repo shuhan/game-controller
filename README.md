@@ -44,6 +44,7 @@ Autonomus scrapper will publish following ROStopics when in autonomous mode
 /drone/battery_status
 /drone/intent
 /drone/target
+/drone/bear_direction
 ```
 Battery percentil is published as Unit8 on `/drone/battery_status` topic. Whereas, Intent is an enumerator. Possible values are given bellow
 
@@ -51,13 +52,14 @@ Battery percentil is published as Unit8 on `/drone/battery_status` topic. Wherea
 | ----------------------------- | ----- |
 | `INTENT_FIND_THE_SITE`        | 0     |
 | `INTENT_NAVIGATE_TO_SITE`     | 1     |
-| `INTENT_FIND_GROUND_ROBOT`    | 2     |
-| `INTENT_DIRECT_GROUND_ROBOT`  | 3     |
-| `INTENT_RETURN_TO_BASE`       | 4     |
-| `INTENT_RETURNING_TO_BASE`    | 5     |
-| `INTENT_FIND_LANDING_PAD`     | 6     |
-| `INTENT_PREPARE_TO_LAND`      | 7     |
-| `INTENT_LAND`                 | 8     |
+| `INTENT_FIND_THE_BEAR`        | 2     |
+| `INTENT_FIND_GROUND_ROBOT`    | 3     |
+| `INTENT_DIRECT_GROUND_ROBOT`  | 4     |
+| `INTENT_RETURN_TO_BASE`       | 5     |
+| `INTENT_RETURNING_TO_BASE`    | 6     |
+| `INTENT_FIND_LANDING_PAD`     | 7     |
+| `INTENT_PREPARE_TO_LAND`      | 8     |
+| `INTENT_LAND`                 | 9     |
 
 Drone target is published as a `Twist` message and it provides a vector direction to the land robot.
 
@@ -71,6 +73,8 @@ Each parameter of the `Twist` is explained bellow
 | `target.angular.x`| N/A                                                   |
 | `target.angular.y`| N/A                                                   |
 | `target.angular.z`| Orientation angle for the marker to face the target<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ Anti Clockwise Rotation<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Clockwise Rotation                                 |
+
+Bear direction publish a `String` describing where Mr. York is relative to his car. Direction is provided is `east`, `west`, `north`, `south` and `unknown`.
 
 Autonomous controller also subscribes to following topics
 ```
