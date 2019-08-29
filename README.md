@@ -46,6 +46,7 @@ Autonomus scrapper will publish following ROStopics when in autonomous mode
 /drone/target
 ```
 Battery percentil is published as Unit8 on `/drone/battery_status` topic. Whereas, Intent is an enumerator. Possible values are given bellow
+
 | NAME                          | VALUE |
 | ----------------------------- | ----- |
 | `INTENT_FIND_THE_SITE`        | 0     |
@@ -61,6 +62,7 @@ Battery percentil is published as Unit8 on `/drone/battery_status` topic. Wherea
 Drone target is published as a `Twist` message and it provides a vector direction to the land robot.
 
 Each parameter of the `Twist` is explained bellow
+
 | PROPERTY          | DESCRIPTION                                           |
 | ----------------- | ----------------------------------------------------- |
 | `target.linear.x` | Distance of the marker (Robot/Gate/Pad)               |
