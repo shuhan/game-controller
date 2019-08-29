@@ -113,7 +113,7 @@ class DroneVision:
             bear_found, bear_bounding_box = self.detector.findMrYork(False)
             if bear_found and bear_bounding_box is not None:
                 self.bearVisible = True
-                self.bearFramePosition  = (bear_bounding_box[0] + bear_bounding_box[2])/2
+                self.bearFramePosition  = ((bear_bounding_box[0] + bear_bounding_box[2])/2, (bear_bounding_box[1] + bear_bounding_box[3])/2)
                 mPhi                    = (self.vertical_fov/2) - (((height - self.bearFramePosition[1]) / height) * self.vertical_fov)
                 mAngle                  = np.radians(90 - (mPhi - theta - zeta))
                 self.bearDistance       = self.drone.altitude * np.tan(mAngle)

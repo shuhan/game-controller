@@ -100,7 +100,7 @@ class RosProxySocketListener:
                     elif cmd[0] == "intent":
                         self.intent_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "bear_direction":
-                        self.intent_pub.publish(String(cmd[1]))
+                        self.bear_direction_pub.publish(String(cmd[1]))
                     elif cmd[0] == "target":
                         if len(cmd) != 4:
                             print("Invalid command: {0}".format(self.buffer))
