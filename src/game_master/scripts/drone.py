@@ -60,7 +60,6 @@ class BebopDrone:
         self.guideTheta         = 0
         self.guideAngularError  = 0
         self.distanceChanged    = None
-        self.bearFound          = False
         self.vehicleFound       = False
         self.siteAngle          = None
         self.siteDistance       = None

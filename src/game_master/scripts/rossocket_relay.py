@@ -14,6 +14,7 @@ class RosProxySocketListener:
         self.battery_status_pub     = rospy.Publisher('/drone/battery_status', UInt8, queue_size=1)
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
         self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
+        self.bear_direction_pub     = rospy.Publisher('/drone/bear_direction', String, queue_size=1)
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
         self.control_sub            = rospy.Subscriber('/drone/go', Empty, self.lets_play, queue_size=1)
         self.host                   = None # Bind with all interfaces
@@ -98,6 +99,8 @@ class RosProxySocketListener:
                         self.battery_status_pub.publish(UInt8(int(cmd[1])))
                     elif cmd[0] == "intent":
                         self.intent_pub.publish(UInt8(int(cmd[1])))
+                    elif cmd[0] == "bear_direction":
+                        self.intent_pub.publish(String(cmd[1]))
                     elif cmd[0] == "target":
                         if len(cmd) != 4:
                             print("Invalid command: {0}".format(self.buffer))

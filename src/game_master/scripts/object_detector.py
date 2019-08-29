@@ -93,8 +93,8 @@ class Detector:
 
         threash = 90
 
-        bear_mask   = cv2.inRange(self.hsvImage, np.array([16, 64, 60]), np.array([30, 150, 130])) & self.expectedFloorMask
-        tshirt_mask = cv2.inRange(self.hsvImage, np.array([40, 40, 32]), np.array([75, 113, 66])) & self.expectedFloorMask
+        bear_mask   = cv2.inRange(self.hsvImage, np.array([10, 110, 64]), np.array([32, 176, 155])) & self.expectedFloorMask
+        tshirt_mask = cv2.inRange(self.hsvImage, np.array([40, 51, 26]), np.array([77, 95, 61])) & self.expectedFloorMask
 
         kernel = np.ones((16,16),np.uint8)
 
@@ -119,9 +119,10 @@ class Detector:
                 if area > threash and area > 0.6 * w * h and wh_ratio > 0.7 and wh_ratio < 1.40 and np.sum(bear_mask[y:y+h, x:x+w])/255 > threash and np.sum(self.expectedFloorMask[y:y+h, x:x+w])/255 > (5*area)/6:
                     bear_bounding_box = (x, y, x + w, y + h)
 
+        if bear_found and bear_bounding_box is not None:
+            cv2.rectangle(self.origImg, (bear_bounding_box[0], bear_bounding_box[1]), (bear_bounding_box[2], bear_bounding_box[3]), (255, 255, 0), 2)
+        
         if Display:
-            if bear_found and bear_bounding_box is not None:
-                cv2.rectangle(self.origImg, (bear_bounding_box[0], bear_bounding_box[1]), (bear_bounding_box[2], bear_bounding_box[3]), (255, 255, 0), 2)
             cv2.imshow("Bear Found", self.origImg)
             cv2.imshow("Floor Mask", self.expectedFloorMask)
 

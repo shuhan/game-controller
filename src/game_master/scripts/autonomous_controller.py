@@ -41,13 +41,14 @@ class AutonomousController:
 
     INTENT_FIND_THE_SITE        = 0
     INTENT_NAVIGATE_TO_SITE     = 1
-    INTENT_FIND_GROUND_ROBOT    = 2
-    INTENT_DIRECT_GROUND_ROBOT  = 3
-    INTENT_RETURN_TO_BASE       = 4
-    INTENT_RETURNING_TO_BASE    = 5
-    INTENT_FIND_LANDING_PAD     = 6
-    INTENT_PREPARE_TO_LAND      = 7
-    INTENT_LAND                 = 8
+    INTENT_FIND_THE_BEAR        = 2
+    INTENT_FIND_GROUND_ROBOT    = 3
+    INTENT_DIRECT_GROUND_ROBOT  = 4
+    INTENT_RETURN_TO_BASE       = 5
+    INTENT_RETURNING_TO_BASE    = 6
+    INTENT_FIND_LANDING_PAD     = 7
+    INTENT_PREPARE_TO_LAND      = 8
+    INTENT_LAND                 = 9
 
     SEARCH_HEIGHT               = 1.5
     TAKE_OFF_HEIGHT             = 1.3
@@ -79,6 +80,7 @@ class AutonomousController:
         self.battery_status_pub     = rospy.Publisher('/drone/battery_status', UInt8, queue_size=1)
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
         self.intent_pub             = rospy.Publisher('/drone/intent', UInt8, queue_size=1)
+        self.bear_direction_pub     = rospy.Publisher('/drone/bear_direction', String, queue_size=1)
         self.landrobot_visual_sub   = rospy.Subscriber('/landrobot/object_found', String, self.landrobot_found_object, queue_size=1)
         self.control_sub            = rospy.Subscriber('/drone/go', Empty, self.lets_play, queue_size=1)
 
@@ -434,6 +436,20 @@ class AutonomousController:
         print("On Accident site\n\n")
         self.take_a_photo("accident_site")
 
+        self.intent = self.INTENT_FIND_THE_BEAR
+
+        # Let's see if we can look to target
+        print("Looking for the bear\n\n")
+        self.vision.processBear = True
+        self.goalTracker.setCentreLock(self.get_accident_site_target, True)
+        self.goalTracker.setSwipeTarget(self.begin_look_for_ground_robot)
+    
+    def begin_look_for_ground_robot(self):
+        # Still the intent is to find the bear?
+        if self.intent == self.INTENT_FIND_THE_BEAR:
+            self.bear_direction_pub.publish(String("unknown"))
+        self.goalTracker.reset()
+        self.vision.processBear = False
         self.intent = self.INTENT_FIND_GROUND_ROBOT
         print("Looking for ground robot\n\n")
         self.begin_search_swipe(self.look_for_ground_robot, self.SEARCH_HEIGHT)
@@ -516,6 +532,35 @@ class AutonomousController:
                         self.site_found = True
                         self.intent = self.INTENT_NAVIGATE_TO_SITE
                         self.goalTracker.setOrientationTarget(self.drone.siteAngle, False, self.wait_and_navigate_to_site)
+                    elif self.intent == self.INTENT_FIND_THE_BEAR and self.vision.bearVisible and self.drone.siteFramePosition is not None:
+                        self.intent = self.INTENT_FIND_GROUND_ROBOT
+                        self.begin_look_for_ground_robot()
+
+                        bear_direction = "Not Found"
+
+                        y_diff = self.vision.bearFramePosition[1] - self.drone.siteFramePosition[1]
+
+                        bear_on_top = y_diff < 0
+
+                        angularDistances = {
+                            'east' : abs(self.goalTracker.getAngularError(self.drone.yaw, self.visualScale.eastWall)),
+                            'west' : abs(self.goalTracker.getAngularError(self.drone.yaw, self.visualScale.westWall)),
+                            'north': abs(self.goalTracker.getAngularError(self.drone.yaw, self.visualScale.northWall)),
+                            'south': abs(self.goalTracker.getAngularError(self.drone.yaw, self.visualScale.southWall)),
+                        }
+
+                        droneHeading = min(angularDistances, key=angularDistances.get)
+                        
+                        if droneHeading     == 'east':
+                            bear_direction = 'east' if bear_on_top else 'west'
+                        elif droneHeading   == 'west':
+                            bear_direction = 'west' if bear_on_top else 'east'
+                        elif droneHeading   == 'north':
+                            bear_direction = 'north' if bear_on_top else 'south'
+                        elif droneHeading   == 'south':
+                            bear_direction = 'south' if bear_on_top else 'north'
+
+                        self.bear_direction_pub.publish(String(bear_direction))
 
                     elif self.intent == self.INTENT_FIND_GROUND_ROBOT:
                         if self.vision.groundRobotVisible:  # Vehicle found, send vector from vehicle

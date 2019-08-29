@@ -31,6 +31,24 @@ class GoalTracker:
         self.valueCallback      = None
         self.valueAchived       = False
 
+    def setCentreLock(self, funcToPoint, hold=True, callback=None):
+        if not callable(funcToPoint):
+            raise ValueError("Invalid parameters")
+        self.resetDistanceTarget()
+        self.resetPointTarget()
+        self.enableCentreLock       = True
+        self.funcToCentrePoint      = funcToPoint
+        self.holdCentreLock         = hold
+        self.centreLockCallback     = callback
+        self.centreLockAchived      = False
+
+    def resetCentreLock(self):
+        self.enableCentreLock       = False
+        self.funcToCentrePoint      = None
+        self.holdCentreLock         = False
+        self.centreLockCallback     = False
+        self.centreLockAchived      = False
+
     def setPointTarget(self, funcToPoint, hold=True, callback=None):
         '''
         Track and navigate to a point provided by the funcToPoint function
@@ -41,6 +59,7 @@ class GoalTracker:
         if not callable(funcToPoint):
             raise ValueError("Invalid parameters")
         self.resetDistanceTarget()
+        self.resetCentreLock()
         self.enablePointTarget  = True
         self.funcToPoint        = funcToPoint
         self.holdPoint          = hold
@@ -111,6 +130,7 @@ class GoalTracker:
 
     def setDistanceTarget(self, targetDistance, hold=True, callback=None):
         self.resetPointTarget()
+        self.resetCentreLock()
         self.enableDistance     = True
         self.holdDistance       = hold
         self.distanceAchived    = False
@@ -144,6 +164,7 @@ class GoalTracker:
 
     def reset(self):
         self.resetValueTarget()
+        self.resetCentreLock()
         self.resetPointTarget()
         self.resetHeightTarget()
         self.resetOrientationTarget()
@@ -222,6 +243,41 @@ class GoalTracker:
         
         return self.pointAchived
 
+    def adjustCentreLock(self):
+        '''
+        Adjust point target based on the funToPoint callback
+        '''
+        if not callable(self.funcToCentrePoint):
+            return self.centreLockAchived
+
+        currentPoint, targetPoint   = self.funcToCentrePoint()
+
+        # Don't know about point so please ignore
+        if currentPoint is None:
+            return self.centreLockAchived
+
+        errorVector                 = self.getPointError(currentPoint, targetPoint)
+        errorMagnitude              = np.linalg.norm(errorVector)
+
+        #Lets try to set a 150 pixel error max we can make it configureable
+        if errorMagnitude > 100:
+            if abs(errorVector[0]) > 40:
+                signY = (errorVector[0]/abs(errorVector[0]))
+                moveY = signY * min([0.05, abs(errorVector[0])])
+                self.drone.moveY(moveY)
+            
+            if abs(errorVector[1]) > 40:
+                signX = errorVector[1]/abs(errorVector[1])
+                moveX = signX * min([0.06, abs(errorVector[1])])
+                self.drone.moveX(moveX)
+        else:
+            if not self.centreLockAchived:
+                print("Centre Lock achived\n\n")
+                self.centreLockAchived = True
+                if callable(self.centreLockCallback):
+                    self.centreLockCallback()
+        
+        return self.centreLockAchived
 
     def adjustHeight(self):
         '''
@@ -323,6 +379,9 @@ class GoalTracker:
         '''
         if self.enableValueTarget and not self.valueAchived:
             self.adjustValueTarget()
+
+        if self.enableCentreLock and (self.holdCentreLock or not self.centreLockAchived):
+            self.adjustCentreLock()
 
         if self.enablePointTarget and (self.holdPoint or not self.pointAchived):
             self.adjustPointTarget()

@@ -19,6 +19,7 @@ class RosProxySocketClient:
         self.battery_status_sub     = rospy.Subscriber('/drone/battery_status', UInt8, self.battery_status_received, queue_size=1)
         self.target_sub             = rospy.Subscriber('/drone/target', Twist, self.target_received, queue_size=1)
         self.intent_sub             = rospy.Subscriber('/drone/intent', UInt8, self.intent_received, queue_size=1)
+        self.bear_direction_sub     = rospy.Subscriber('/drone/bear_direction', String, self.bear_direction_received, queue_size=1)
         self.landrobot_visual_pub   = rospy.Publisher('/landrobot/object_found', String, queue_size=1)
         self.control_sub            = rospy.Publisher('/drone/go', Empty, queue_size=1)
         self.buffer                 = ""
@@ -55,6 +56,17 @@ class RosProxySocketClient:
                 print("Unable to pass intent, connection error")
         else:
             print("Unable to pass intent, not connected")
+
+    def bear_direction_received(self, data):
+        if self.socket != None:
+            try:
+                cmd = "bear_direction,{0}".format(data.data)
+                print(cmd)
+                self.socket.send(cmd + "\n")
+            except socket.error:
+                print("Unable to pass bear_direction, connection error")
+        else:
+            print("Unable to pass bear_direction, not connected")
 
     def connect(self):
         for res in socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM):
