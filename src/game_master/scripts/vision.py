@@ -73,7 +73,7 @@ class DroneVision:
         self.newFrameProcessed      = False
         self.processLine            = False
         self.processMarker          = False
-        self.processBear            = True
+        self.processBear            = False
 
     def angle_between(self, a, b, c):
         ang = math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0])
