@@ -203,6 +203,8 @@ class AutonomousController:
     #-----------------------------------------------------------------------
     def taken_off(self):
         print("Adjusted height\n\n")
+        # Start processing ground line once the dron has taken off
+        self.vision.processLine = True
         self.goalTracker.setVisualOrientationTarget(VisualMeasurement.NORTH, self.intial_orientate)
 
     def intial_orientate(self):
@@ -219,6 +221,8 @@ class AutonomousController:
     def moved_in_middle(self):
         # Now turn right
         print("Moved in the middle\n\n")
+        # Start processing marker only after the drone has left gantry area to avoid hiting on it.
+        self.vision.processMarker = True
         self.goalTracker.setOrientationTarget(self.visualScale.eastWall, True, self.turned_on_right)
         self.inMiddle   = True
 

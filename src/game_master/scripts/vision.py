@@ -71,8 +71,8 @@ class DroneVision:
         self.bearFrameDistance      = None
         # New frame flag
         self.newFrameProcessed      = False
-        self.processLine            = True
-        self.processMarker          = True
+        self.processLine            = False
+        self.processMarker          = False
         self.processBear            = False
 
     def angle_between(self, a, b, c):
