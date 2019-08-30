@@ -69,8 +69,6 @@ class AutonomousController:
         self.rate                   = rospy.Rate(100)
         self.status_init            = True
         self.site_found             = False
-        self.directionFixed         = False
-        self.goodFound              = False
         self.autonomous             = False
         self.groundSwipeCount       = 0
         self.intent                 = self.INTENT_FIND_THE_SITE
@@ -115,9 +113,6 @@ class AutonomousController:
     def takeoff_landing(self):
         if self.char == ' ':
             self.drone.cameraControl(0, 0)
-            self.directionFixed = False
-            self.goodFound  = False
-            self.inMiddle   = False
             self.drone.takeoffLanding()
             self.kb.clear()
         elif self.char == 'x':
@@ -161,9 +156,6 @@ class AutonomousController:
     def lets_play(self, data):
         if self.drone.state == self.drone.FLIGHT_STATE_NOT_FLYING or self.drone.state == self.drone.FLIGHT_STATE_UNKNOWN:
             self.drone.cameraControl(0, 0)
-            self.directionFixed = False
-            self.goodFound  = False
-            self.inMiddle   = False
             self.drone.takeoff()
             self.autonomous = True
 
@@ -209,7 +201,6 @@ class AutonomousController:
 
     def intial_orientate(self):
         self.visualScale.setNorth(self.drone.yaw)
-        self.goodFound      = True
         print("Orientation done\n\n")
         self.drone.cameraControl(-20, 0)
         self.goalTracker.setOrientationTarget(self.visualScale.northWall)
@@ -224,7 +215,6 @@ class AutonomousController:
         # Start processing marker only after the drone has left gantry area to avoid hiting on it.
         self.vision.processMarker = True
         self.goalTracker.setOrientationTarget(self.visualScale.eastWall, True, self.turned_on_right)
-        self.inMiddle   = True
 
     def turned_on_right(self):
         print("Turned towards right\n\n")
@@ -650,8 +640,6 @@ class AutonomousController:
                         self.vision.expectedDistance    = 6.50
                         self.intent                     = self.INTENT_FIND_THE_SITE
                         self.site_found                 = False
-                        self.directionFixed             = False
-                        self.goodFound                  = False
                         self.groundRobotFound           = False
                         self.autonomous                 = False
                         # Set the initial goal back (Won't be processed as robot is not in autonomous mode)
