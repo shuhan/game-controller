@@ -253,6 +253,9 @@ class AutonomousController:
     #-----------------------------------------------------------------------
     # Visibility checks
     #-----------------------------------------------------------------------
+    def robot_in_view(self):
+        return self.vision.groundRobotVisible and self.vision.groundRobotAngle is not None
+
     def site_in_view(self):
         return self.drone.vehicleFound and self.drone.siteAngle is not None
 
@@ -451,11 +454,11 @@ class AutonomousController:
     def look_for_ground_robot(self):
 
         if self.groundSwipeCount == 0:
-            self.drone.cameraControl(-30, 0)
-        elif self.groundSwipeCount == 1:
-            self.drone.cameraControl(-50, 0)
-        elif self.groundSwipeCount == 2:
             self.drone.cameraControl(-20, 0)
+        elif self.groundSwipeCount == 1:
+            self.drone.cameraControl(-40, 0)
+        elif self.groundSwipeCount == 2:
+            self.drone.cameraControl(-60, 0)
 
         if self.groundSwipeCount < 3:
             self.goalTracker.setSwipeTarget(self.look_for_ground_robot)
@@ -486,6 +489,20 @@ class AutonomousController:
             '''
             # self.drone.cameraControl(self.drone.camera_tilt - random.randint(-2, 5), self.drone.camera_pan)
             return None, np.array([self.vision.width/2, self.vision.height/2])
+
+    def wait_and_report_location(self):
+        self.goalTracker.setValueTarget(self.robot_in_view, self.report_location)
+
+    def report_location(self):
+        # Publish target
+        target = Twist()
+        target.linear.x    = self.vision.groundRobotDistance
+        target.linear.y    = 0
+        target.angular.z   = self.vision.groundRobotOrientation
+        self.target_pub.publish(target)
+        # Return
+        self.return_to_base()
+        
     #-----------------------------------------------------------------------
     # End navigate to accident site
     #-----------------------------------------------------------------------
@@ -568,14 +585,7 @@ class AutonomousController:
                             angular_error  = (self.vision.vertical_fov/2) - (((self.vision.height - self.vision.groundFramePosition[1]) / self.vision.height) * self.vision.vertical_fov)
                             self.drone.cameraControl(self.drone.camera_tilt - int(angular_error), self.drone.camera_pan)
                             # Orientate towards the robot
-                            self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
-
-                            # Publish target
-                            target = Twist()
-                            target.linear.x    = self.vision.groundRobotDistance
-                            target.linear.y    = 0
-                            target.angular.z   = self.vision.groundRobotOrientation
-                            self.target_pub.publish(target)
+                            self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False, self.wait_and_report_location)
                         else:
                             if self.vision.eastGateVisible:   # Supporting possition based on east gate
                                 target = Twist()
@@ -595,18 +605,6 @@ class AutonomousController:
                                 target.linear.y    = 3
                                 target.angular.z   = self.vision.landingPadOrientation
                                 self.target_pub.publish(target)
-
-                    elif self.intent == self.INTENT_DIRECT_GROUND_ROBOT and self.vision.groundRobotVisible:
-                        # self.goalTracker.setOrientationTarget(self.vision.groundRobotAngle, False)
-                        
-                        # Publish target
-                        # target = Twist()
-                        # target.linear.x    = self.vision.groundRobotDistance
-                        # target.angular.z   = self.vision.groundRobotOrientation
-
-                        # self.target_pub.publish(target)
-
-                        self.return_to_base()
 
                     elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
                         # first cancle all previous targets
