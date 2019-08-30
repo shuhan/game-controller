@@ -91,7 +91,7 @@ class Detector:
 
     def findMrYork(self, Display=True):
 
-        threash = 90
+        threash = 80
 
         bear_mask   = cv2.inRange(self.hsvImage, np.array([10, 110, 64]), np.array([32, 176, 155])) & self.expectedFloorMask
         tshirt_mask = cv2.inRange(self.hsvImage, np.array([40, 51, 26]), np.array([77, 95, 61])) & self.expectedFloorMask
@@ -102,13 +102,14 @@ class Detector:
 
         _, tshirt_mask = cv2.threshold(cv2.blur(tshirt_mask, (5,5)), 127, 255, cv2.THRESH_BINARY)
         tshirt_region = cv2.dilate(tshirt_mask, kernel, iterations=2)
+        bear_region   = cv2.dilate(bear_mask, kernel, iterations=2)
 
         bear_found = np.sum((bear_mask & tshirt_region))/255 > threash
 
         bear_bounding_box = None
 
         if bear_found:
-            _, contours, _ = cv2.findContours(tshirt_region, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            _, contours, _ = cv2.findContours(tshirt_region | bear_region, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             
             for contour in contours:
                 contour = cv2.convexHull(contour)
@@ -116,7 +117,7 @@ class Detector:
                 area = cv2.contourArea(contour)
                 wh_ratio = float(w)/float(h)
                 
-                if area > threash and area > 0.6 * w * h and wh_ratio > 0.7 and wh_ratio < 1.40 and np.sum(bear_mask[y:y+h, x:x+w])/255 > threash and np.sum(self.expectedFloorMask[y:y+h, x:x+w])/255 > (5*area)/6:
+                if area > threash and area > 0.6 * w * h and wh_ratio > 0.7 and wh_ratio < 1.40 and np.sum(tshirt_mask[y:y+h, x:x+w])/255 > threash and np.sum(bear_mask[y:y+h, x:x+w])/255 > threash and np.sum(self.expectedFloorMask[y:y+h, x:x+w])/255 > (2*area)/3:
                     bear_bounding_box = (x, y, x + w, y + h)
 
         if bear_found and bear_bounding_box is not None:
