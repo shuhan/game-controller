@@ -245,7 +245,7 @@ class GoalTracker:
 
     def adjustCentreLock(self):
         '''
-        Adjust point target based on the funToPoint callback
+        Adjust centre lock based on the funToPoint callback
         '''
         if not callable(self.funcToCentrePoint):
             return self.centreLockAchived
