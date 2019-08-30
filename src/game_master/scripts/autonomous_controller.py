@@ -74,6 +74,7 @@ class AutonomousController:
         self.intent                 = self.INTENT_FIND_THE_SITE
         self.groundRobotFound       = False
         self.landingGateTarget      = None
+        self.currentSearchGround    = 0
 
         self.battery_status_pub     = rospy.Publisher('/drone/battery_status', UInt8, queue_size=1)
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
@@ -161,7 +162,8 @@ class AutonomousController:
 
     def landrobot_found_object(self, data):
         print("Ground robot found the accident site\n\n")
-        self.return_to_base()
+        if self.intent > self.INTENT_FIND_THE_BEAR:
+            self.return_to_base()
 
     def begin_search_swipe(self, func, height):
         '''
@@ -214,10 +216,15 @@ class AutonomousController:
         print("Moved in the middle\n\n")
         # Start processing marker only after the drone has left gantry area to avoid hiting on it.
         self.vision.processMarker = True
-        self.goalTracker.setOrientationTarget(self.visualScale.eastWall, True, self.turned_on_right)
+        self.goalTracker.setOrientationTarget(self.visualScale.eastWall, True, self.faced_east)
 
-    def turned_on_right(self):
-        print("Turned towards right\n\n")
+    def faced_east(self):
+        print("Turned towards east wall\n\n")
+        self.vision.expectedDistance = self.drone.guideDistance
+        self.goalTracker.setDistanceTarget(3, False, self.begin_look_for_accident_site)
+
+    def faced_south(self):
+        print("Turned towards south wall\n\n")
         self.vision.expectedDistance = self.drone.guideDistance
         self.goalTracker.setDistanceTarget(3, False, self.begin_look_for_accident_site)
 
@@ -225,6 +232,8 @@ class AutonomousController:
         self.begin_search_swipe(self.look_for_accident_site, self.LANDING_HEIGHT)
 
     def look_for_accident_site(self):
+        # Keep track of how many places were searched
+        self.currentSearchGround += 1
         if self.groundSwipeCount == 0:
             print("Searching for accident site...")
             self.drone.cameraControl(-30, 0)    # Mid range
@@ -237,8 +246,11 @@ class AutonomousController:
             self.goalTracker.setSwipeTarget(self.look_for_accident_site)
         else:
             print("Couldn't find accident site\n\n")
-            # Just return to base
-            self.return_to_base()
+            if  self.currentSearchGround > 1:
+                # Just return to base
+                self.return_to_base()
+            else:
+                self.goalTracker.setOrientationTarget(self.visualScale.southWall, True, self.faced_south)
             
         self.groundSwipeCount += 1
 
@@ -640,6 +652,7 @@ class AutonomousController:
                         self.site_found                 = False
                         self.groundRobotFound           = False
                         self.autonomous                 = False
+                        self.currentSearchGround        = 0
                         # Set the initial goal back (Won't be processed as robot is not in autonomous mode)
                         self.goalTracker.setHeightTarget(self.TAKE_OFF_HEIGHT, False, self.taken_off)
 
