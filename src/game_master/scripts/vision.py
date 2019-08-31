@@ -71,7 +71,7 @@ class DroneVision:
         self.bearFrameDistance      = None
         # New frame flag
         self.newFrameProcessed      = False
-        self.processLine            = False
+        self.processLine            = True
         self.processMarker          = False
         self.processBear            = False
 

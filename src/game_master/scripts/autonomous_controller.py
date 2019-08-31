@@ -50,9 +50,9 @@ class AutonomousController:
     INTENT_PREPARE_TO_LAND      = 8
     INTENT_LAND                 = 9
 
-    SEARCH_HEIGHT               = 1.5
+    SEARCH_HEIGHT               = 1.6
     TAKE_OFF_HEIGHT             = 1.3
-    LANDING_HEIGHT              = 1.0
+    LANDING_HEIGHT              = 0.8
     MIN_BATTERY_LEVEL           = 15
 
     def __init__(self):
@@ -175,7 +175,7 @@ class AutonomousController:
         '''
         self.groundSwipeCount = 0
         if callable(func):
-            self.goalTracker.setHeightTarget(height, False, func)
+            self.goalTracker.setHeightTarget(height, True, func)
     
     def take_a_photo(self, name):
         home = expanduser("~")
@@ -187,7 +187,10 @@ class AutonomousController:
         if self.intent < self.INTENT_RETURN_TO_BASE:
             self.intent = self.INTENT_RETURN_TO_BASE
             print("Looking for gate\n\n")
-            self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
+            self.goalTracker.setOrientationTarget(self.visualScale.southWall, False, self.begin_look_for_landing_gate)
+
+    def begin_look_for_landing_gate(self):
+        self.begin_search_swipe(self.look_for_landing_gate, self.SEARCH_HEIGHT)
     #-----------------------------------------------------------------------
     # End Common Functions
     #-----------------------------------------------------------------------
@@ -293,17 +296,31 @@ class AutonomousController:
             self.drone.cameraControl(-15, 0)
         elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-30, 0)
-        elif self.groundSwipeCount == 2:
-            self.drone.cameraControl(-50, 0)
 
-        if self.groundSwipeCount < 3:
+        if self.groundSwipeCount < 2:
             self.goalTracker.setSwipeTarget(self.look_for_landing_gate)
         else:
+            self.landing_gate_was_missing()
+        self.groundSwipeCount += 1
+
+    def landing_gate_was_missing(self):
+        '''
+        Handle special case of landing
+        '''
+        # first cancle all previous targets
+        self.goalTracker.reset()
+        self.intent = self.INTENT_RETURNING_TO_BASE
+        
+        if self.vision.eastGateDistance is None and self.vision.northGateDistance is None:
             print("Couldn't find landing gate\n\n")
             # If gate marker isn't visible it's safe to just land where you are
             self.drone.land()
-        
-        self.groundSwipeCount += 1
+        elif self.vision.eastGateDistance is None:
+            print("Navigating to north gate\n\n")
+            self.goalTracker.setOrientationTarget(self.vision.northGateAngle, False, self.wait_and_navigate_to_north)
+        else:
+            print("Navigating to east gate\n\n")
+            self.goalTracker.setOrientationTarget(self.vision.eastGateAngle, False, self.wait_and_navigate_to_east)
 
     def wait_and_navigate_to_north(self):
         self.landingGateTarget = 'north'
@@ -618,19 +635,12 @@ class AutonomousController:
                                 target.angular.z   = self.vision.landingPadOrientation
                                 self.target_pub.publish(target)
 
-                    elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateVisible or self.vision.northGateVisible):
+                    elif self.intent == self.INTENT_RETURN_TO_BASE and (self.vision.eastGateDistance is not None and self.vision.northGateDistance is not None):
                         # first cancle all previous targets
                         self.goalTracker.reset()
                         self.intent = self.INTENT_RETURNING_TO_BASE
                         
-                        if not self.vision.eastGateVisible:
-                            print("Navigating to north gate\n\n")
-                            self.goalTracker.setOrientationTarget(self.vision.northGateAngle, False, self.wait_and_navigate_to_north)
-                        elif not self.vision.northGateVisible:
-                            print("Navigating to east gate\n\n")
-                            self.goalTracker.setOrientationTarget(self.vision.eastGateAngle, False, self.wait_and_navigate_to_east)
-                        # Both gates are visible
-                        elif self.vision.eastFrameDistance > self.vision.northFrameDistance:
+                        if self.vision.eastGateDistance > self.vision.northGateDistance:
                             print("Navigating to north gate\n\n")
                             self.goalTracker.setOrientationTarget(self.vision.northGateAngle, False, self.wait_and_navigate_to_north)
                         else:
