@@ -177,7 +177,7 @@ class AutonomousController:
         '''
         self.groundSwipeCount = 0
         if callable(func):
-            self.goalTracker.setHeightTarget(height, True, func)
+            self.goalTracker.setHeightTarget(height, False, func)
     
     def take_a_photo(self, name):
         home = expanduser("~")
