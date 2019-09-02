@@ -75,6 +75,7 @@ class AutonomousController:
         self.groundRobotFound       = False
         self.landingGateTarget      = None
         self.currentSearchGround    = 0
+        self.groundRobotFoundMrYork = False
 
         self.battery_status_pub     = rospy.Publisher('/drone/battery_status', UInt8, queue_size=1)
         self.target_pub             = rospy.Publisher('/drone/target', Twist, queue_size=1)
@@ -162,6 +163,7 @@ class AutonomousController:
 
     def landrobot_found_object(self, data):
         print("Ground robot found the accident site\n\n")
+        self.groundRobotFoundMrYork = True
         if self.intent > self.INTENT_FIND_THE_BEAR:
             self.return_to_base()
 
@@ -482,6 +484,9 @@ class AutonomousController:
 
     def look_for_ground_robot(self):
 
+        if self.groundRobotFoundMrYork:
+            self.return_to_base()
+
         if self.groundSwipeCount == 0:
             self.drone.cameraControl(-30, 0)
         elif self.groundSwipeCount == 1:
@@ -523,12 +528,13 @@ class AutonomousController:
         self.goalTracker.setValueTarget(self.robot_in_view, self.report_location)
 
     def report_location(self):
-        # Publish target
-        target = Twist()
-        target.linear.x    = self.vision.groundRobotDistance
-        target.linear.y    = 0
-        target.angular.z   = self.vision.groundRobotOrientation
-        self.target_pub.publish(target)
+        if not self.groundRobotFoundMrYork:
+            # Publish target
+            target = Twist()
+            target.linear.x    = self.vision.groundRobotDistance
+            target.linear.y    = 0
+            target.angular.z   = self.vision.groundRobotOrientation
+            self.target_pub.publish(target)
         # Return
         self.return_to_base()
         
@@ -576,8 +582,11 @@ class AutonomousController:
 
                         self.take_a_photo("mr.york_and_car")
 
-                        self.intent = self.INTENT_FIND_GROUND_ROBOT
-                        self.begin_look_for_ground_robot()
+                        if self.groundRobotFoundMrYork:
+                            self.return_to_base()
+                        else:
+                            self.intent = self.INTENT_FIND_GROUND_ROBOT
+                            self.begin_look_for_ground_robot()
 
                         bear_direction = "unknown"
 
@@ -663,6 +672,7 @@ class AutonomousController:
                         self.groundRobotFound           = False
                         self.autonomous                 = False
                         self.currentSearchGround        = 0
+                        self.groundRobotFoundMrYork     = False
                         # Set the initial goal back (Won't be processed as robot is not in autonomous mode)
                         self.goalTracker.setHeightTarget(self.TAKE_OFF_HEIGHT, False, self.taken_off)
 
