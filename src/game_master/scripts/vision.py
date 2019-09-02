@@ -18,9 +18,9 @@ class DroneVision:
     EAST_ENTRANCE_MARKER_ID     = 39
     NORTH_ENTRANCE_MARKER_ID    = 41
     LANDING_PAD_MARKER_ID       = 40
-    GROUND_ROBOT_MARKER_IDS     = [1, 2, 3, 4]
+    GROUND_ROBOT_MARKER_ID      = 1
     RED_VEHICLE_MARKER_ID       = 10
-    ALL_MARKER_IDS              = [EAST_ENTRANCE_MARKER_ID, NORTH_ENTRANCE_MARKER_ID, LANDING_PAD_MARKER_ID, RED_VEHICLE_MARKER_ID] + GROUND_ROBOT_MARKER_IDS
+    ALL_MARKER_IDS              = [GROUND_ROBOT_MARKER_ID, EAST_ENTRANCE_MARKER_ID, NORTH_ENTRANCE_MARKER_ID, LANDING_PAD_MARKER_ID, RED_VEHICLE_MARKER_ID]
 
     def __init__(self, drone, vfov=45, hfov=80, expectedDistance= 6.50, northToSouth=7.50, eastToWest=6.90):
         self.drone                  = drone
@@ -72,7 +72,7 @@ class DroneVision:
         # New frame flag
         self.newFrameProcessed      = False
         self.processLine            = True
-        self.processMarker          = False
+        self.processMarker          = True
         self.processBear            = False
 
     def angle_between(self, a, b, c):
@@ -151,7 +151,7 @@ class DroneVision:
                         vehicle_found           = True
                         vehicle_bounding_box    = [corners[i][0][0][0], corners[i][0][0][1], corners[i][0][0][0] + 40, corners[i][0][0][1] + 40]
                         siteFramePosition       = markerCentre
-                    elif ids[i][0] in self.GROUND_ROBOT_MARKER_IDS:
+                    elif ids[i][0] == self.GROUND_ROBOT_MARKER_ID:
                         self.groundRobotVisible     = True
                         self.groundRobotAngle       = self.drone.yaw - np.radians(markerAngleDeg)
                         self.groundRobotDistance    = markerDistance
