@@ -483,7 +483,7 @@ class AutonomousController:
     def look_for_ground_robot(self):
 
         if self.groundSwipeCount == 0:
-            self.drone.cameraControl(-25, 0)
+            self.drone.cameraControl(-30, 0)
         elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-40, 0)
         elif self.groundSwipeCount == 2:
