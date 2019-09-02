@@ -52,7 +52,7 @@ class AutonomousController:
 
     SEARCH_HEIGHT               = 1.6
     TAKE_OFF_HEIGHT             = 1.3
-    LANDING_HEIGHT              = 0.8
+    LANDING_HEIGHT              = 1.0
     MIN_BATTERY_LEVEL           = 15
 
     def __init__(self):
