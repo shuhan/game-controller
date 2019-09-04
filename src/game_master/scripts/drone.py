@@ -71,6 +71,7 @@ class BebopDrone:
         self.navi_pub       = rospy.Publisher('/bebop/cmd_vel', Twist, queue_size=1)
         self.cam_control    = rospy.Publisher('/bebop/camera_control', Twist, queue_size=1)
         self.record_control = rospy.Publisher('/bebop/record', Bool, queue_size=1)
+        self.flattrim_pub   = rospy.Publisher('/bebop/flattrim', Empty, queue_size=1)
         # Subscribers
         self.speed_sub      = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/SpeedChanged", Ardrone3PilotingStateSpeedChanged, self.onSpeedChanged, queue_size=1)
         self.altitude_sub   = rospy.Subscriber("/bebop/states/ardrone3/PilotingState/AltitudeChanged", Ardrone3PilotingStateAltitudeChanged, self.onAltitudeChanged, queue_size=1)
@@ -194,6 +195,9 @@ class BebopDrone:
 
     def land(self):
         self.land_pub.publish()
+
+    def flattrim(self):
+        self.flattrim_pub.publish()
 
     #-----------------------------------------------------------------------
     # Piloting Control

@@ -119,6 +119,10 @@ class AutonomousController:
             self.kb.clear()
         elif self.char == 'x':
             self.autonomous = not self.autonomous
+        elif self.char == 't':
+            if self.drone.state == self.drone.FLIGHT_STATE_NOT_FLYING or self.drone.state == self.drone.FLIGHT_STATE_UNKNOWN:
+                print("Flattrimmed...\n\n")
+                self.drone.flattrim()
     
     def navigate(self):
         
@@ -237,10 +241,8 @@ class AutonomousController:
         self.begin_search_swipe(self.look_for_accident_site, self.LANDING_HEIGHT)
 
     def look_for_accident_site(self):
-        # Keep track of how many places were searched
-        self.currentSearchGround += 1
         if self.groundSwipeCount == 0:
-            print("Searching for accident site...")
+            print("Searching for accident site...\n\n")
             self.drone.cameraControl(-30, 0)    # Mid range
         elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-50, 0)    # Close range
@@ -251,6 +253,8 @@ class AutonomousController:
             self.goalTracker.setSwipeTarget(self.look_for_accident_site)
         else:
             print("Couldn't find accident site\n\n")
+            # Keep track of how many places were searched
+            self.currentSearchGround += 1
             if  self.currentSearchGround > 1:
                 # Just return to base
                 self.return_to_base()
@@ -262,7 +266,7 @@ class AutonomousController:
     def prepare_to_land(self):
         print("preparing to land\n\n")
         self.intent = self.INTENT_LAND
-        self.goalTracker.setHeightTarget(self.LANDING_HEIGHT, False, self.drone.land)
+        self.drone.land()
     #-----------------------------------------------------------------------
     # End autonomouse control routines : Explore
     #-----------------------------------------------------------------------
@@ -294,13 +298,13 @@ class AutonomousController:
     def look_for_landing_gate(self):
 
         if self.groundSwipeCount == 0:
-            print("Searching for landing gate...")
+            print("Searching for landing gate...\n\n")
             self.drone.cameraControl(-15, 0)
         elif self.groundSwipeCount == 1:
             self.drone.cameraControl(-30, 0)
 
         if self.groundSwipeCount < 2:
-            self.goalTracker.setSwipeTarget(self.look_for_landing_gate)
+            self.goalTracker.setSwipeTarget(self.look_for_landing_gate, 0.2)
         else:
             self.landing_gate_was_missing()
         self.groundSwipeCount += 1

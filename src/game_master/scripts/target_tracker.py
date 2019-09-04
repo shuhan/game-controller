@@ -209,8 +209,8 @@ class GoalTracker:
         errorVector                 = self.getPointError(currentPoint, targetPoint)
         errorMagnitude              = np.linalg.norm(errorVector)
 
-        #Lets try to set a 100 pixel error max we can make it configureable
-        if errorMagnitude > 100 or self.drone.camera_tilt > -70:
+        #Lets try to set a 200 pixel error max we can make it configureable
+        if errorMagnitude > 200 or self.drone.camera_tilt > -70:
             
             if abs(errorVector[0]) > 40:
                 signY = (errorVector[0]/abs(errorVector[0]))
@@ -220,7 +220,7 @@ class GoalTracker:
             else:   # Lets control the angle and forward seperately
                 if errorVector[1] > 0 or self.drone.camera_tilt <= -70:
                     signX = errorVector[1]/abs(errorVector[1])
-                    moveX = signX * min([0.06, abs(errorVector[1])])
+                    moveX = signX * min([0.1, abs(errorVector[1])])
                     self.drone.moveX(moveX)
                 elif self.drone.camera_tilt > -70:
                     if self.lastTiltChanged > 10:
