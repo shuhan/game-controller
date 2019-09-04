@@ -393,6 +393,7 @@ class AutonomousController:
     # Navigate to landing
     #-----------------------------------------------------------------------
     def begin_look_for_landing_pad(self):
+        self.drone.cameraControl(-30, 0)
         self.intent = self.INTENT_FIND_LANDING_PAD
         self.begin_search_swipe(self.look_for_landing_pad, self.LANDING_HEIGHT)
 
