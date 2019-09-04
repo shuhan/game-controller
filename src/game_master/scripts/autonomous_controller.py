@@ -477,6 +477,9 @@ class AutonomousController:
         self.goalTracker.setSwipeTarget(self.begin_look_for_ground_robot)
     
     def begin_look_for_ground_robot(self):
+        # Forget about it if the drone has seen the gate before
+        self.vision.eastGateDistance    = None
+        self.vision.northGateDistance   = None
         # Still the intent is to find the bear?
         if self.intent == self.INTENT_FIND_THE_BEAR:
             self.bear_direction_pub.publish(String("unknown"))
