@@ -22,7 +22,7 @@ class DroneVision:
     RED_VEHICLE_MARKER_ID       = 10
     ALL_MARKER_IDS              = [GROUND_ROBOT_MARKER_ID, EAST_ENTRANCE_MARKER_ID, NORTH_ENTRANCE_MARKER_ID, LANDING_PAD_MARKER_ID, RED_VEHICLE_MARKER_ID]
 
-    def __init__(self, drone, vfov=45, hfov=80, expectedDistance= 6.50, northToSouth=7.50, eastToWest=6.90):
+    def __init__(self, drone, vfov=45, hfov=80, expectedDistance=8.0, northToSouth=8.0, eastToWest=8.0):
         self.drone                  = drone
         self.vertical_fov           = vfov
         self.horizontal_fov         = hfov
